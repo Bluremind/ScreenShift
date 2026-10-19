@@ -1,15 +1,15 @@
-<div align="center">
+﻿<div align="center">
 
 # ScreenShift
 
 **Часть экрана ноутбука не работает? Верните весь рабочий стол Windows на ту часть, что ещё показывает.**
 
-Маленькая бесплатная утилита с открытым кодом. Она сдвигает и вписывает *весь* рабочий стол (обои, значки, кнопку «Пуск», панель задач) в рабочую область повреждённой матрицы. Без драйверов, без установщика, один файл на 18 КБ.
+Маленькая бесплатная утилита с открытым кодом. Она сдвигает и вписывает *весь* рабочий стол (обои, значки, кнопку «Пуск», панель задач) в рабочую область повреждённой матрицы. Без драйверов, без установщика, один файл на 19 КБ.
 
 [![Релиз](https://img.shields.io/github/v/release/Bluremind/ScreenShift?style=flat-square&color=2ea043)](https://github.com/Bluremind/ScreenShift/releases/latest)
 [![Лицензия: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 ![Windows 10+](https://img.shields.io/badge/Windows-10%20%2B-0078d4?style=flat-square)
-![Размер](https://img.shields.io/badge/размер-18%20КБ-8957e5?style=flat-square)
+![Размер](https://img.shields.io/badge/размер-19%20КБ-8957e5?style=flat-square)
 ![Без телеметрии](https://img.shields.io/badge/телеметрия-нет-lightgrey?style=flat-square)
 
 [**Скачать**](https://github.com/Bluremind/ScreenShift/releases/latest) · [English](README.md) · [Как это работает](#как-это-работает) · [Вопросы и ответы](#вопросы-и-ответы)
