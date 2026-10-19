@@ -4,10 +4,11 @@
 
 **Your laptop screen is partly dead? Put the whole Windows desktop back on the part that still works.**
 
-A tiny, free, open-source tool that moves and fits the *entire* desktop (wallpaper, icons, Start button, taskbar) into the working area of a damaged panel. No drivers. No installer. One 22 KB file, in English and Russian.
+A tiny tool, free for non-commercial use, that moves and fits the *entire* desktop (wallpaper, icons, Start button, taskbar) into the working area of a damaged panel. No drivers. No installer. One 22 KB file, in English and Russian.
 
 [![Release](https://img.shields.io/github/v/release/Bluremind/ScreenShift?style=flat-square&color=2ea043)](https://github.com/Bluremind/ScreenShift/releases/latest)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange?style=flat-square)](LICENSE)
+[![Commercial license](https://img.shields.io/badge/commercial%20use-paid%20license-blueviolet?style=flat-square)](COMMERCIAL.md)
 ![Windows 10+](https://img.shields.io/badge/Windows-10%20%2B-0078d4?style=flat-square)
 ![Size](https://img.shields.io/badge/size-22%20KB-8957e5?style=flat-square)
 ![No telemetry](https://img.shields.io/badge/telemetry-none-lightgrey?style=flat-square)
@@ -106,6 +107,9 @@ A lower resolution is stretched across the whole panel, so the dead strip still 
 **Why not AMD or NVIDIA scaling options?**
 Those usually center the picture, which wastes good pixels on the opposite side, and are often missing for built-in laptop panels. ScreenShift lets you cut each side by exactly the amount you need.
 
+**Is it free?**
+Yes, for any non-commercial use: at home, for study, research, in schools and charities. Using it for business, for example on company computers or as part of a paid repair, needs a paid commercial license. See [License](#license).
+
 **Which languages does it speak?**
 English and Russian. ScreenShift picks Russian when Windows is set to Russian and English otherwise. Use `--lang=en` or `--lang=ru` to override it. All texts live in one small `L.T("ru", "en")` table in the source, so adding another language is easy, see [Contributing](#contributing).
 
@@ -125,7 +129,7 @@ ScreenShift changes display settings, so you should be able to check what you ru
 
 ## Contributing
 
-Issues and pull requests are welcome. Good first contributions:
+Issues and pull requests are welcome. By submitting a contribution you agree that it is distributed under the project's [license](#license), including the commercial licenses offered by the author. Good first contributions:
 
 - More interface languages (English and Russian are built in)
 - Support for multiple displays
@@ -134,7 +138,16 @@ Issues and pull requests are welcome. Good first contributions:
 
 ## License
 
-[MIT](LICENSE). Free for personal and commercial use.
+| | |
+| --- | --- |
+| **Non-commercial use** | **Free.** Personal, study, research, schools, charities and other non-profits, under the [PolyForm Noncommercial License 1.0.0](LICENSE). |
+| **Commercial use** | **Paid license.** Companies, freelancers working for clients, paid services, redistribution inside a product. See [COMMERCIAL.md](COMMERCIAL.md). |
+
+The source code is public so you can read and verify it, but this is not an open-source license in the OSI sense.
+
+**Contact for a commercial license:** [bluremind@gmail.com](mailto:bluremind@gmail.com?subject=ScreenShift%20commercial%20license) · [GitHub issues](https://github.com/Bluremind/ScreenShift/issues) for questions and bug reports.
+
+Version 1.0.0 was briefly published under the MIT license and has been withdrawn. Copies of 1.0.0 that were already downloaded remain under MIT, every later version uses the license above.
 
 <div align="center">
 
