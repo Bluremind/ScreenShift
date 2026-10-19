@@ -16,6 +16,14 @@ using System.Windows.Forms;
 
 namespace ScreenShift
 {
+    // UI language: Russian when Windows is set to Russian, English otherwise. `--lang=en|ru` overrides.
+    public static class L
+    {
+        public static bool Russian = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru";
+        public static string T(string ru, string en) { return Russian ? ru : en; }
+        public static string Caption { get { return T("Сдвиг экрана", "Screen Shift"); } }
+    }
+
     public static class Native
     {
         [DllImport("user32.dll")] public static extern int GetDisplayConfigBufferSizes(uint flags, out uint numPaths, out uint numModes);
@@ -69,7 +77,9 @@ namespace ScreenShift
                 if (type == DesktopImage && c.img < 0) c.img = i;
             }
             if (np != 1 || c.src < 0 || c.tgt < 0 || c.img < 0)
-                throw new Exception("Нужен ровно один включённый экран без внешних мониторов (сейчас путей: " + np + ").");
+                throw new Exception(L.T(
+                    "Нужен ровно один включённый экран без внешних мониторов (сейчас путей: " + np + ").",
+                    "Exactly one active display is required, with no external monitors (active paths: " + np + ")."));
             return c;
         }
 
@@ -127,7 +137,7 @@ namespace ScreenShift
 
         public static void Check(int rc, string what)
         {
-            if (rc != 0) throw new Exception(what + ": код ошибки " + rc + ".");
+            if (rc != 0) throw new Exception(what + L.T(": код ошибки ", ": error code ") + rc + ".");
         }
     }
 
@@ -189,7 +199,7 @@ namespace ScreenShift
             CutLeft = cutLeft;
             CutBottom = cutBottom;
             Crisp = crisp;
-            Text = "Сдвиг экрана";
+            Text = L.Caption;
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
             Bounds = new Rectangle(Point.Empty, panel);
@@ -237,16 +247,25 @@ namespace ScreenShift
             }
 
             string mode = crisp
-                ? (fits ? string.Format("чётко, без сжатия (рабочий стол {0}×{1})", desktop.Width, desktop.Height) : "чётко — не помещается, уменьшите полосы")
-                : string.Format("вся картинка, сжата до {0:0.#}%", 100.0 * region.Width / w);
-            string body =
-                "Жёлтые линии — новые края картинки. Всё красное станет чёрным.\n" +
-                "← →  двигать левую линию      ↑ ↓  двигать нижнюю      Shift — быстрее\n" +
-                "Подведите каждую линию вплотную к чёрной полосе, но так, чтобы её ещё было видно.\n" +
-                "Если клавиши не действуют — щёлкните по экрану.\n\n" +
-                string.Format("Слева убрать: {0} px      Снизу убрать: {1} px\n", cutLeft, cutBottom) +
-                "Tab — режим: " + mode + "\n\n" +
-                "Enter — применить      R — убрать сдвиг      Esc — выйти";
+                ? (fits
+                    ? string.Format(L.T("чётко, без сжатия (рабочий стол {0}×{1})", "crisp, 1:1 (desktop {0}×{1})"), desktop.Width, desktop.Height)
+                    : L.T("чётко — не помещается, уменьшите полосы", "crisp — does not fit, reduce the strips"))
+                : string.Format(L.T("вся картинка, сжата до {0:0.#}%", "fill, scaled to {0:0.#}%"), 100.0 * region.Width / w);
+            string body = L.Russian
+                ? "Жёлтые линии — новые края картинки. Всё красное станет чёрным.\n" +
+                  "← →  двигать левую линию      ↑ ↓  двигать нижнюю      Shift — быстрее\n" +
+                  "Подведите каждую линию вплотную к чёрной полосе, но так, чтобы её ещё было видно.\n" +
+                  "Если клавиши не действуют — щёлкните по экрану.\n\n" +
+                  string.Format("Слева убрать: {0} px      Снизу убрать: {1} px\n", cutLeft, cutBottom) +
+                  "Tab — режим: " + mode + "\n\n" +
+                  "Enter — применить      R — убрать сдвиг      Esc — выйти"
+                : "Yellow lines are the new edges of the picture. Everything red will turn black.\n" +
+                  "← →  move the left line      ↑ ↓  move the bottom line      Shift — faster\n" +
+                  "Place each line right next to the dead strip, but keep the strip itself out of view.\n" +
+                  "If the keys do nothing, click on the screen.\n\n" +
+                  string.Format("Cut from the left: {0} px      Cut from the bottom: {1} px\n", cutLeft, cutBottom) +
+                  "Tab — mode: " + mode + "\n\n" +
+                  "Enter — apply      R — remove the shift      Esc — exit";
 
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             var visible = new Rectangle(cutLeft + 8, 0, w - cutLeft - 8, lineY - 8);
@@ -254,10 +273,10 @@ namespace ScreenShift
             using (var font = new Font("Segoe UI", h / 50f, GraphicsUnit.Pixel))
             using (var fmt = new StringFormat { Alignment = StringAlignment.Center })
             {
-                SizeF ts = g.MeasureString("Сдвиг экрана", title, visible.Width, fmt);
+                SizeF ts = g.MeasureString(L.Caption, title, visible.Width, fmt);
                 SizeF bs = g.MeasureString(body, font, visible.Width, fmt);
                 float top = visible.Top + (visible.Height - ts.Height - bs.Height) / 2;
-                g.DrawString("Сдвиг экрана", title, Brushes.White, new RectangleF(visible.Left, top, visible.Width, ts.Height), fmt);
+                g.DrawString(L.Caption, title, Brushes.White, new RectangleF(visible.Left, top, visible.Width, ts.Height), fmt);
                 g.DrawString(body, font, Brushes.Gainsboro, new RectangleF(visible.Left, top + ts.Height, visible.Width, bs.Height + 4), fmt);
             }
         }
@@ -294,7 +313,7 @@ namespace ScreenShift
         {
             float k;
             using (var g = CreateGraphics()) k = g.DpiX / 96f;
-            Text = "Сдвиг экрана";
+            Text = L.Caption;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = MinimizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
@@ -303,8 +322,8 @@ namespace ScreenShift
             Font = new Font("Segoe UI", 11f);
             ClientSize = new Size((int)(480 * k), (int)(150 * k));
             label = new Label { Left = (int)(16 * k), Top = (int)(12 * k), Width = (int)(448 * k), Height = (int)(76 * k) };
-            var keep = new Button { Text = "Оставить", Left = (int)(16 * k), Top = (int)(96 * k), Width = (int)(216 * k), Height = (int)(40 * k) };
-            var back = new Button { Text = "Вернуть как было", Left = (int)(248 * k), Top = (int)(96 * k), Width = (int)(216 * k), Height = (int)(40 * k) };
+            var keep = new Button { Text = L.T("Оставить", "Keep"), Left = (int)(16 * k), Top = (int)(96 * k), Width = (int)(216 * k), Height = (int)(40 * k) };
+            var back = new Button { Text = L.T("Вернуть как было", "Revert"), Left = (int)(248 * k), Top = (int)(96 * k), Width = (int)(216 * k), Height = (int)(40 * k) };
             keep.Click += delegate { DialogResult = DialogResult.Yes; };
             back.Click += delegate { DialogResult = DialogResult.No; };
             CancelButton = back;
@@ -322,7 +341,9 @@ namespace ScreenShift
 
         void UpdateText()
         {
-            label.Text = "Картинку видно целиком?\nЕсли ничего не нажать, через " + secondsLeft + " с всё вернётся как было.";
+            label.Text = L.T(
+                "Картинку видно целиком?\nЕсли ничего не нажать, через " + secondsLeft + " с всё вернётся как было.",
+                "Can you see the whole picture?\nIf you press nothing, everything reverts in " + secondsLeft + " s.");
         }
 
         protected override void Dispose(bool disposing)
@@ -336,7 +357,7 @@ namespace ScreenShift
     {
         static readonly string SettingsFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ScreenShift", "settings.txt");
-        const string Caption = "Сдвиг экрана";
+        static string Caption { get { return L.Caption; } }
 
         [STAThread]
         public static int Main(string[] args)
@@ -344,7 +365,15 @@ namespace ScreenShift
             try { Native.SetProcessDpiAwarenessContext(new IntPtr(-4)); }
             catch (EntryPointNotFoundException) { Native.SetProcessDPIAware(); }
             Application.EnableVisualStyles();
-            try { return Run(args.Length > 0 ? args[0].ToLowerInvariant() : ""); }
+
+            string command = "";
+            foreach (string arg in args)
+            {
+                string a = arg.ToLowerInvariant();
+                if (a.StartsWith("--lang=")) L.Russian = a.Substring("--lang=".Length) == "ru";
+                else if (command.Length == 0) command = a;
+            }
+            try { return Run(command); }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, Caption, MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -371,14 +400,16 @@ namespace ScreenShift
                 Rectangle region;
                 if (!Planner.Plan(current.Panel, cutLeft, cutBottom, crisp, out desktop, out region)) return 1;
                 if (current.Desktop == desktop && current.Region == region) return 0;
-                DisplayConfig.Check(current.With(desktop, region).Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE), "Не удалось применить сдвиг");
+                DisplayConfig.Check(current.With(desktop, region).Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
+                    L.T("Не удалось применить сдвиг", "Could not apply the shift"));
                 return 0;
             }
 
             // Calibrate on the unshifted picture so overlay pixels are panel pixels.
             bool wasShifted = !current.IsIdentity;
             if (wasShifted)
-                DisplayConfig.Check(current.Identity().Apply(DisplayConfig.SDC_APPLY), "Не удалось временно убрать сдвиг");
+                DisplayConfig.Check(current.Identity().Apply(DisplayConfig.SDC_APPLY),
+                    L.T("Не удалось временно убрать сдвиг", "Could not temporarily remove the shift"));
 
             DialogResult result;
             using (var overlay = new Overlay(current.Panel, cutLeft, cutBottom, crisp))
@@ -392,7 +423,7 @@ namespace ScreenShift
             if (result == DialogResult.Retry)
             {
                 Reset(current);
-                MessageBox.Show("Сдвиг убран, картинка снова на весь экран.", Caption);
+                MessageBox.Show(L.T("Сдвиг убран, картинка снова на весь экран.", "The shift is removed, the picture is full screen again."), Caption);
                 return 0;
             }
             if (result != DialogResult.OK)
@@ -406,7 +437,9 @@ namespace ScreenShift
             if (!Planner.Plan(current.Panel, cutLeft, cutBottom, crisp, out newDesktop, out newRegion))
             {
                 if (wasShifted) Restore(current);
-                MessageBox.Show("В режиме «чётко» картинка не помещается. Выберите Tab режим «вся картинка».", Caption);
+                MessageBox.Show(L.T(
+                    "В режиме «чётко» картинка не помещается. Выберите Tab режим «вся картинка».",
+                    "The picture does not fit in crisp mode. Press Tab to switch to fill mode."), Caption);
                 return 1;
             }
             DisplayConfig next = current.With(newDesktop, newRegion);
@@ -415,7 +448,9 @@ namespace ScreenShift
             if (rc != 0)
             {
                 if (wasShifted) Restore(current);
-                MessageBox.Show("Windows не приняла такой режим (код " + rc + "). Ничего не изменено.", Caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L.T(
+                    "Windows не приняла такой режим (код " + rc + "). Ничего не изменено.",
+                    "Windows rejected this mode (code " + rc + "). Nothing was changed."), Caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return 1;
             }
 
@@ -423,7 +458,8 @@ namespace ScreenShift
             using (var confirm = new Confirm()) answer = confirm.ShowDialog();
             if (answer == DialogResult.Yes)
             {
-                DisplayConfig.Check(next.Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE), "Не удалось сохранить сдвиг");
+                DisplayConfig.Check(next.Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
+                    L.T("Не удалось сохранить сдвиг", "Could not save the shift"));
                 Save(cutLeft, cutBottom, crisp);
             }
             else
@@ -440,7 +476,8 @@ namespace ScreenShift
 
         static void Reset(DisplayConfig current)
         {
-            DisplayConfig.Check(current.Identity().Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE), "Не удалось убрать сдвиг");
+            DisplayConfig.Check(current.Identity().Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
+                L.T("Не удалось убрать сдвиг", "Could not remove the shift"));
             if (File.Exists(SettingsFile)) File.Delete(SettingsFile);
         }
 

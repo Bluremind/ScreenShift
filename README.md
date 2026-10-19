@@ -4,12 +4,12 @@
 
 **Your laptop screen is partly dead? Put the whole Windows desktop back on the part that still works.**
 
-A tiny, free, open-source tool that moves and fits the *entire* desktop (wallpaper, icons, Start button, taskbar) into the working area of a damaged panel. No drivers. No installer. One 19 KB file.
+A tiny, free, open-source tool that moves and fits the *entire* desktop (wallpaper, icons, Start button, taskbar) into the working area of a damaged panel. No drivers. No installer. One 22 KB file, in English and Russian.
 
 [![Release](https://img.shields.io/github/v/release/Bluremind/ScreenShift?style=flat-square&color=2ea043)](https://github.com/Bluremind/ScreenShift/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 ![Windows 10+](https://img.shields.io/badge/Windows-10%20%2B-0078d4?style=flat-square)
-![Size](https://img.shields.io/badge/size-19%20KB-8957e5?style=flat-square)
+![Size](https://img.shields.io/badge/size-22%20KB-8957e5?style=flat-square)
 ![No telemetry](https://img.shields.io/badge/telemetry-none-lightgrey?style=flat-square)
 
 [**Download**](https://github.com/Bluremind/ScreenShift/releases/latest) · [Русский](README.ru.md) · [How it works](#how-it-works) · [FAQ](#faq)
@@ -35,6 +35,7 @@ ScreenShift asks Windows' display stack to draw the desktop inside a smaller rec
 - **Safe by design.** After applying, you have 20 seconds to press **Keep**. Do nothing and the old picture comes back on its own.
 - **Remembers your setup.** Re-apply it any time with `ScreenShift.exe --apply`.
 - **Two quality modes.** *Crisp* shows the desktop 1:1 at the largest standard resolution that fits. *Fill* uses the whole good area and scales the picture slightly.
+- **English and Russian.** The interface follows your Windows language. Force one with `--lang=en` or `--lang=ru`.
 - **Tiny and private.** One small exe, no installer, no network access, no telemetry. The code is a single readable C# file.
 
 ## Quick start
@@ -45,6 +46,12 @@ ScreenShift asks Windows' display stack to draw the desktop inside a smaller rec
 4. Press **Tab** to choose *Crisp* or *Fill*, then **Enter** to apply.
 5. Press **Keep** within 20 seconds. Done.
 
+<div align="center">
+<img src="assets/calibration-en.png" alt="The calibration screen: yellow lines mark the new edges of the picture, red hatching marks what will turn black." width="720">
+<br>
+<sub>The calibration screen (rendered by the program itself, shown at half size). Yellow lines are the new edges of the picture.</sub>
+</div>
+
 > Windows may show a SmartScreen warning because the exe is not code-signed. See [Trust and verification](#trust-and-verification).
 
 ## Commands
@@ -54,6 +61,7 @@ ScreenShift asks Windows' display stack to draw the desktop inside a smaller rec
 | `ScreenShift.exe` | Open calibration. Enter applies, R removes the shift, Esc exits. |
 | `ScreenShift.exe --apply` | Re-apply the saved shift without asking. Handy for startup. |
 | `ScreenShift.exe --reset` | Remove the shift and delete the saved settings. |
+| `--lang=en` or `--lang=ru` | Add to any command to choose the interface language. |
 
 Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt` as three values: pixels cut on the left, pixels cut at the bottom, and the mode.
 
@@ -98,14 +106,14 @@ A lower resolution is stretched across the whole panel, so the dead strip still 
 **Why not AMD or NVIDIA scaling options?**
 Those usually center the picture, which wastes good pixels on the opposite side, and are often missing for built-in laptop panels. ScreenShift lets you cut each side by exactly the amount you need.
 
-**The interface is in Russian. Will there be English?**
-The calibration screen is currently in Russian. The keys are shown on screen and listed above. Translations are a great first contribution, see [Contributing](#contributing).
+**Which languages does it speak?**
+English and Russian. ScreenShift picks Russian when Windows is set to Russian and English otherwise. Use `--lang=en` or `--lang=ru` to override it. All texts live in one small `L.T("ru", "en")` table in the source, so adding another language is easy, see [Contributing](#contributing).
 
 ## Trust and verification
 
 ScreenShift changes display settings, so you should be able to check what you run.
 
-- The whole program is one file: [`ScreenShift.cs`](ScreenShift.cs), about 420 lines. It makes no network calls and writes only `settings.txt`.
+- The whole program is one file: [`ScreenShift.cs`](ScreenShift.cs), about 450 lines. It makes no network calls and writes only `settings.txt`.
 - Build it yourself in seconds with the C# compiler that ships with Windows, no SDK needed:
 
   ```powershell
@@ -119,7 +127,7 @@ ScreenShift changes display settings, so you should be able to check what you ru
 
 Issues and pull requests are welcome. Good first contributions:
 
-- English (and other) interface translations
+- More interface languages (English and Russian are built in)
 - Support for multiple displays
 - Reports of which GPUs and laptops work
 - An optional "start with Windows" switch
