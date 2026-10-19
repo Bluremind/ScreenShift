@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="t d">
+  <title id="t">ScreenShift: before and after</title>
+  <desc id="d">Left: a laptop screen whose left strip and bottom strip are dead, so part of the desktop is cut off. Right: the same desktop shifted entirely into the working area.</desc>
+  <defs>
+    <pattern id="dead" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="10" height="10" fill="#1a0b0b"/>
+      <rect width="5" height="10" fill="#4a1414"/>
+    </pattern>
+    <linearGradient id="wall" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <style>
+      .bg { fill: #0d1117; }
+      .label { font: 600 20px "Segoe UI", system-ui, sans-serif; fill: #e6edf3; }
+      .sub { font: 400 14px "Segoe UI", system-ui, sans-serif; fill: #8b949e; }
+      .win { fill: #161b22; stroke: #30363d; stroke-width: 2; }
+      .icon { fill: #f0f6fc; opacity: .85; }
+      .bar { fill: #21262d; }
+      .start { fill: #58a6ff; }
+    </style>
+  </defs>
+  <rect class="bg" width="960" height="420" rx="18"/>
+
+  <!-- BEFORE -->
+  <text class="label" x="240" y="42" text-anchor="middle">Before</text>
+  <text class="sub" x="240" y="64" text-anchor="middle">Start button and icons are lost in the dead strip</text>
+  <g transform="translate(60 84)">
+    <rect width="360" height="225" rx="10" fill="#000" stroke="#30363d" stroke-width="3"/>
+    <rect x="0" y="0" width="360" height="225" rx="10" fill="url(#wall)"/>
+    <rect x="52" y="30" width="230" height="130" rx="6" class="win"/>
+    <rect x="52" y="30" width="230" height="16" rx="6" class="bar"/>
+    <rect x="6" y="150" width="36" height="9" rx="3" class="icon"/>
+    <rect x="6" y="100" width="36" height="9" rx="3" class="icon"/>
+    <rect x="0" y="205" width="360" height="20" class="bar"/>
+    <rect x="6" y="210" width="14" height="10" rx="2" class="start"/>
+    <!-- dead strips -->
+    <rect x="0" y="0" width="52" height="225" fill="url(#dead)"/>
+  </g>
+
+  <!-- arrow -->
+  <g transform="translate(450 190)" stroke="#58a6ff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-14 0 H14 M4 -10 L14 0 L4 10"/>
+  </g>
+
+  <!-- AFTER -->
+  <text class="label" x="720" y="42" text-anchor="middle">After</text>
+  <text class="sub" x="720" y="64" text-anchor="middle">The whole desktop fits the working part</text>
+  <g transform="translate(540 84)">
+    <rect width="360" height="225" rx="10" fill="#000" stroke="#30363d" stroke-width="3"/>
+    <rect x="0" y="0" width="52" height="225" fill="url(#dead)"/>
+    <g transform="translate(52 0)">
+      <svg width="308" height="225" viewBox="0 0 360 225" preserveAspectRatio="none">
+        <rect width="360" height="225" fill="url(#wall)"/>
+        <rect x="52" y="30" width="230" height="130" rx="6" class="win"/>
+        <rect x="52" y="30" width="230" height="16" rx="6" class="bar"/>
+        <rect x="6" y="150" width="36" height="9" rx="3" class="icon"/>
+        <rect x="6" y="100" width="36" height="9" rx="3" class="icon"/>
+        <rect x="0" y="205" width="360" height="20" class="bar"/>
+        <rect x="6" y="210" width="14" height="10" rx="2" class="start"/>
+      </svg>
+    </g>
+  </g>
+
+  <text class="sub" x="480" y="372" text-anchor="middle">Red hatching = dead part of the panel. Illustration, not a screenshot.</text>
+</svg>

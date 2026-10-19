@@ -1,0 +1,5 @@
+# Build output: binaries are published as GitHub Releases, not committed.
+dist/
+*.exe
+*.pdb
+.vs/
