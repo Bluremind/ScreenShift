@@ -1,5 +1,5 @@
 // Required Notice: Copyright (c) 2026 Bluremind (https://github.com/Bluremind/ScreenShift)
-// Licensed under the PolyForm Noncommercial License 1.0.0 (see LICENSE). Commercial use needs a paid license (COMMERCIAL.md).
+// Free for personal use under the ScreenShift Personal Use License (see LICENSE). Any other use needs a paid license (COMMERCIAL.md).
 //
 // ScreenShift: moves the Windows picture off the dead strips of a damaged panel.
 // The desktop is placed inside the part of the panel that still shows an image
