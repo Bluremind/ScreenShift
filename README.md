@@ -1,3 +1,71 @@
+# ScreenShift — 四边独立裁切版本
+
+本仓库是 [Bluremind/ScreenShift](https://github.com/Bluremind/ScreenShift) 的 fork，增加 **左、上、右、下四个边界独立调整**，用于将完整 Windows 桌面放到损坏屏幕仍可用的矩形区域内。原作者：Bluremind；原版权声明和许可证保持不变。
+
+> 本版本的程序界面仍为英文／俄文。下方保留的原项目介绍、截图和官方下载链接描述的是上游版本；上游 EXE 不包含本 fork 的四边修改。本 fork 目前没有发布修改版 EXE。
+
+## 本版本的改动
+
+- 四边裁切计算、四条边界预览、四边像素数显示及配置保存。
+- 兼容原来的三项配置，读取时将上、右裁切设为 0。
+- 支持 1 像素微调；取消每边最多裁切三分之一的限制。
+- 校准界面保留至少 640×360 的可用区域；屏幕某维度更小时保留该维度全长。
+- 保留应用后 20 秒内确认、超时恢复和手动重置功能。
+
+## 操作方法
+
+| 按键 | 操作 |
+| --- | --- |
+| ← / → | 移动左边界 |
+| ↑ / ↓ | 移动下边界 |
+| Ctrl + ← / → | 移动右边界 |
+| Ctrl + ↑ / ↓ | 移动上边界 |
+| Shift + 上述移动按键 | 每次 20 像素（默认 4 像素） |
+| Alt + 上述移动按键 | 每次 1 像素 |
+| Tab | 切换 Crisp / Fill |
+| Enter | 应用；20 秒内点击 Keep 保存，否则恢复 |
+| R | 移除裁切并删除保存配置 |
+| Esc | 取消校准 |
+
+边界按箭头方向移动。Crisp 在可用区域内居中放置能容纳的最大标准分辨率，按 1:1 显示；Fill 保持原屏幕比例缩放，可能仍有额外黑边。仅支持矩形区域和一个活动显示器，实际可用性取决于显卡驱动。
+
+## 从源码编译
+
+使用 Windows 的 .NET Framework 4.x C# 编译器，无需安装 Visual Studio、.NET SDK 或 NuGet 包。在仓库目录执行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+.\dist\ScreenShift.exe
+```
+
+输出文件为 `dist\ScreenShift.exe`。验证几何计算、边界快捷键和预览绘制：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
+```
+
+这些检查不会改变显示设置。实际显卡应用与超时恢复流程需要在目标设备上交互验证。
+
+## 保存配置
+
+文件位置：`%LOCALAPPDATA%\ScreenShift\settings.txt`。
+
+新格式为 `左 上 右 下 模式`，例如 `100 50 200 150 fill`。旧格式 `左 下 模式` 仍然兼容。初次运行默认四边均为 0。
+
+- `ScreenShift.exe --apply`：直接应用已保存配置，不显示确认窗口。
+- `ScreenShift.exe --reset`：恢复完整屏幕并删除配置。
+- 修改配置文件后建议先打开校准界面预览，再按 Enter 确认。
+
+## 下载与许可
+
+GitHub Releases 可以附加 EXE 供下载，和 Git 源码提交相互独立；`.gitignore` 忽略 `*.exe` 不影响 Release 附件。
+
+但本项目的 [LICENSE](LICENSE) 第 3、4 条限制修改版分发和提供下载，需取得作者书面许可。本 fork 暂不提供修改版 EXE，先向上游提交功能贡献供审查。原作者的正式版本可从 [上游 Releases](https://github.com/Bluremind/ScreenShift/releases) 下载。公开源码不等于允许任意再分发，个人使用及其他用途请遵循原许可证。
+
+---
+
+## 上游项目介绍（保留原文）
+
 <div align="center">
 
 # ScreenShift
