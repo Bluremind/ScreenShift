@@ -1,4 +1,10 @@
-# ScreenShift — 四边独立裁切版本 / Four-edge calibration
+# ScreenShift — 屏幕损坏四边裁切 / Four-edge desktop adjustment for damaged screens
+
+**屏幕边缘坏了、出现黑条，导致任务栏或窗口被挡住？** 本 fork 为 ScreenShift 增加四边独立裁切，把完整 Windows 桌面放进屏幕仍可用的矩形区域。它是屏幕损坏后的软件应对方法，不会修复液晶面板；需要 Windows 10+、一个活动显示器及兼容的显卡驱动。
+
+**Damaged laptop screen or dead strips hiding your taskbar and windows?** This ScreenShift fork adds independent left, top, right and bottom adjustments to fit the Windows desktop into the working rectangle of your display. It is a software workaround, not a physical panel repair. Requires Windows 10+, one active display and a compatible GPU driver.
+
+**项目地址 / Project:** [wangcanhao-cmd/ScreenShift](https://github.com/wangcanhao-cmd/ScreenShift) · **上游贡献 / Contribution:** [PR #1](https://github.com/Bluremind/ScreenShift/pull/1)
 
 [中文](#中文) | [English](#english)
 
