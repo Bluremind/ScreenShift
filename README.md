@@ -32,7 +32,7 @@ Windows has no setting for "this part of my screen is dead". Moving windows arou
 ScreenShift asks Windows' display stack to draw the desktop inside a smaller rectangle of the panel. Everything is moved together, so nothing hides under the dead area. The dead strips simply stay black.
 
 - **Everything fits.** Taskbar, Start button, icons, maximized windows.
-- **Calibrate in 30 seconds.** Drag two yellow lines with the arrow keys until they touch the dead strip.
+- **Calibrate in 30 seconds.** Move four yellow lines with the arrow keys until they touch the dead strip.
 - **Safe by design.** After applying, you have 20 seconds to press **Keep**. Do nothing and the old picture comes back on its own.
 - **Remembers your setup.** Re-apply it any time with `ScreenShift.exe --apply`.
 - **Two quality modes.** *Crisp* shows the desktop 1:1 at the largest standard resolution that fits. *Fill* uses the whole good area and scales the picture slightly.
@@ -64,7 +64,7 @@ ScreenShift asks Windows' display stack to draw the desktop inside a smaller rec
 | `ScreenShift.exe --reset` | Remove the shift and delete the saved settings. |
 | `--lang=en` or `--lang=ru` | Add to any command to choose the interface language. |
 
-Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt` as three values: pixels cut on the left, pixels cut at the bottom, and the mode.
+Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt` as five values: left, top, right, bottom (pixels), and the mode (`fill` or `crisp`). Original three-value settings (left, bottom, mode) are still accepted, with top and right set to zero.
 
 ### Re-apply after every boot
 
@@ -151,3 +151,40 @@ The source code is public so you can read and verify it, but this is not an open
 If ScreenShift saved your laptop, a ⭐ helps other people find it.
 
 </div>
+
+## Four-edge calibration (local modification)
+
+All four edges can be adjusted independently. The usable area is rectangular;
+Fill preserves the panel aspect ratio and may leave additional black margins.
+Crisp centers the largest fitting standard resolution inside the selected area.
+
+| Keys | Action |
+| --- | --- |
+| Left / Right | Move the left boundary |
+| Up / Down | Move the bottom boundary |
+| Ctrl + Left / Right | Move the right boundary |
+| Ctrl + Up / Down | Move the top boundary |
+| Shift + movement | Move 20 pixels instead of 4 |
+| Alt + movement | Move 1 pixel |
+| Tab | Toggle Crisp / Fill |
+| Enter | Apply, then confirm Keep within 20 seconds |
+| R / Esc | Reset / cancel |
+
+Boundaries move in the direction of the arrow. Calibration retains at least
+640 x 360 pixels (or the whole panel dimension if smaller) for the instructions.
+There is no longer a one-third-of-panel limit on each edge.
+New installations start with zero cuts. The example settings `100 50 200 150 fill`
+exclude 100 pixels left, 50 top, 200 right, and 150 bottom. Editing the settings
+file alone does not change the display; open calibration to preview and confirm.
+The older screenshots above show the original two-edge UI.
+
+Build and run the geometry/UI checks from the project directory:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
+.\dist\ScreenShift.exe
+```
+
+The checks do not apply display configurations. Actual GPU acceptance and the
+confirmation/revert flow must be checked interactively on the target display.
