@@ -1,4 +1,8 @@
-# ScreenShift — 四边独立裁切版本
+# ScreenShift — 四边独立裁切版本 / Four-edge calibration
+
+[中文](#中文) | [English](#english)
+
+<a id="中文"></a>
 
 本仓库是 [Bluremind/ScreenShift](https://github.com/Bluremind/ScreenShift) 的 fork，增加 **左、上、右、下四个边界独立调整**，用于将完整 Windows 桌面放到损坏屏幕仍可用的矩形区域内。原作者：Bluremind；原版权声明和许可证保持不变。
 
@@ -58,13 +62,87 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
 
 ## 下载与许可
 
+四边裁切功能已通过 [PR #1](https://github.com/Bluremind/ScreenShift/pull/1) 提交上游审查；提交不代表作者已批准或合并。
+
 GitHub Releases 可以附加 EXE 供下载，和 Git 源码提交相互独立；`.gitignore` 忽略 `*.exe` 不影响 Release 附件。
 
 但本项目的 [LICENSE](LICENSE) 第 3、4 条限制修改版分发和提供下载，需取得作者书面许可。本 fork 暂不提供修改版 EXE，先向上游提交功能贡献供审查。原作者的正式版本可从 [上游 Releases](https://github.com/Bluremind/ScreenShift/releases) 下载。公开源码不等于允许任意再分发，个人使用及其他用途请遵循原许可证。
 
 ---
 
-## 上游项目介绍（保留原文）
+<a id="english"></a>
+
+## English — Four-edge calibration fork
+
+This is a fork of [Bluremind/ScreenShift](https://github.com/Bluremind/ScreenShift) that adds **independent left, top, right and bottom boundaries**, so the entire Windows desktop can fit within the usable rectangular part of a damaged panel. Original author: Bluremind. The original copyright notices and license are retained.
+
+The application UI remains English/Russian. The upstream introduction, screenshots and official download links below describe the upstream version; those binaries do not include this fork's changes. This fork has not published a modified executable release.
+
+### Changes in this fork
+
+- Four-edge region planning, four boundary previews, pixel readouts and saved settings.
+- Backward compatibility with the original three-value settings; top and right default to zero when loading them.
+- Optional 1-pixel adjustments and removal of the one-third-of-panel limit per edge.
+- A minimum calibration area of 640 x 360 pixels, or the full panel dimension when that dimension is smaller.
+- The existing 20-second confirmation, automatic revert and manual reset behavior is retained.
+
+### Controls
+
+| Keys | Action |
+| --- | --- |
+| Left / Right | Move the left boundary |
+| Up / Down | Move the bottom boundary |
+| Ctrl + Left / Right | Move the right boundary |
+| Ctrl + Up / Down | Move the top boundary |
+| Shift + movement | Move 20 pixels instead of the default 4 |
+| Alt + movement | Move 1 pixel |
+| Tab | Toggle Crisp / Fill |
+| Enter | Apply; click Keep within 20 seconds, otherwise revert |
+| R | Remove the shift and delete saved settings |
+| Esc | Cancel calibration |
+
+Boundaries move in the direction of the arrow. Crisp centers the largest fitting standard resolution with the panel's aspect ratio at 1:1 pixel size. Fill scales proportionally, so additional black margins may remain. Only rectangular regions and one active display are supported; actual compatibility depends on the GPU driver.
+
+### Build and verify
+
+Use the C# compiler included with Windows .NET Framework 4.x. Visual Studio, the modern .NET SDK and NuGet packages are not required. Run from the repository directory:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+.\dist\ScreenShift.exe
+```
+
+The output is `dist\ScreenShift.exe`. Run the geometry, keyboard and preview checks with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
+```
+
+These checks do not change display settings. Actual GPU acceptance and interactive confirmation/revert require testing on the target device.
+
+### Settings and commands
+
+Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt`.
+
+The new format is `left top right bottom mode`, for example `100 50 200 150 fill`. The original `left bottom mode` format is still accepted. New configurations start with all four cuts at zero.
+
+- `ScreenShift.exe --apply`: apply the saved settings directly without a confirmation dialog.
+- `ScreenShift.exe --reset`: restore the full screen and delete saved settings.
+- After editing settings manually, open calibration to preview them before pressing Enter.
+
+### Downloads, contribution and permission
+
+The four-edge implementation has been submitted upstream as [PR #1](https://github.com/Bluremind/ScreenShift/pull/1) for review. Submission does not mean the changes have been approved or merged.
+
+GitHub Releases can host downloadable EXE attachments independently of Git source commits; ignoring `*.exe` in `.gitignore` does not prevent release attachments. However, sections 3 and 4 of the project's [LICENSE](LICENSE) restrict modified-version distribution and hosting downloads without the author's written permission. No modified executable release is offered here while permission is pending. Official upstream builds are available from [upstream Releases](https://github.com/Bluremind/ScreenShift/releases).
+
+Public source availability does not grant unrestricted redistribution rights. Follow the original license for personal use and other uses.
+
+[Back to Chinese / 返回中文](#中文)
+
+---
+
+## 上游项目介绍（保留原文） / Upstream introduction
 
 <div align="center">
 
