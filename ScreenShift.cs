@@ -138,15 +138,6 @@ namespace ScreenShift
     {
         static List<Size> crispModes;
         static List<Size> driverModes;
-        public static List<Size> UltrawideModes()
-        {
-            return new List<Size> {
-                // Exact ratios within each family; 2560x1080 and 3440x1440 differ slightly.
-                new Size(1280, 540), new Size(1920, 810), new Size(2560, 1080),
-                new Size(1720, 720), new Size(2580, 1080), new Size(3440, 1440),
-                new Size(1920, 540), new Size(2560, 720), new Size(3840, 1080), new Size(5120, 1440)
-            };
-        }
         public static List<Size> DriverModes()
         {
             if (driverModes != null) return driverModes;
@@ -184,6 +175,28 @@ namespace ScreenShift
                 return sa.CompareTo(sb);
             });
             return list;
+        }
+        public static List<Size> ValidatedNearestModes(Rectangle area, IEnumerable<Size> modes, Func<Size, Rectangle, int> validate)
+        {
+            var accepted = new List<Size>();
+            if (validate == null || area.Width <= 0 || area.Height <= 0) return accepted;
+            foreach (Size mode in modes)
+                if (mode.Width > 0 && mode.Height > 0 && !accepted.Contains(mode) && validate(mode, Fit(mode, area)) == 0)
+                    accepted.Add(mode);
+            return NearestAspectModes(area.Size, accepted);
+        }
+        public static string AspectLabel(Size mode)
+        {
+            if (mode.Width <= 0 || mode.Height <= 0) return "?";
+            int a = mode.Width, b = mode.Height;
+            while (b != 0) { int remainder = a % b; a = b; b = remainder; }
+            string exact = (mode.Width / a) + ":" + (mode.Height / a);
+            if (mode.Width / a <= 64 && mode.Height / a <= 64) return exact;
+            int[,] common = { {1,1}, {4,3}, {5,3}, {5,4}, {16,9}, {16,10}, {64,27}, {43,18}, {32,9} };
+            for (int i = 0; i < common.GetLength(0); i++)
+                if (Math.Abs(Math.Log(((double)mode.Width / mode.Height) / ((double)common[i,0] / common[i,1]))) <= 0.002)
+                    return "≈" + common[i,0] + ":" + common[i,1];
+            return exact;
         }
         public static List<Size> NearestAspectModes(Size area, IEnumerable<Size> modes)
         {
@@ -292,6 +305,9 @@ namespace ScreenShift
         readonly ComboBox resolutionList;
         readonly ComboBox languageList;
         readonly Label languageLabel;
+        readonly Func<Size, Rectangle, int> validateMode;
+        Rectangle validatedArea;
+        List<Size> validatedModes;
         bool updatingResolutions;
         int resolutionWidth;
         public bool MatchArea { get { return resolutionBox.Checked; } }
@@ -306,7 +322,11 @@ namespace ScreenShift
             : this(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, false, 0) { }
 
         public Overlay(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect, bool matchArea, int resolutionWidth)
+            : this(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, matchArea, resolutionWidth, null) { }
+
+        public Overlay(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect, bool matchArea, int resolutionWidth, Func<Size, Rectangle, int> validateMode)
         {
+            this.validateMode = validateMode;
             this.panel = panel;
             CutLeft = cutLeft;
             CutTop = cutTop;
@@ -381,6 +401,10 @@ namespace ScreenShift
         protected override void OnPaint(PaintEventArgs e)
         {
             Render(e.Graphics, panel, CutLeft, CutTop, CutRight, CutBottom, Crisp, KeepAspect, MatchArea, ResolutionWidth);
+            if (MatchArea && resolutionList.Items.Count == 0)
+                using (var font = new Font("Segoe UI", 13f, GraphicsUnit.Pixel))
+                    e.Graphics.DrawString(L.Get("noValidated"), font, Brushes.Orange,
+                        new RectangleF(CutLeft + 20, panel.Height - CutBottom - 140, panel.Width - CutLeft - CutRight - 40, 40));
         }
 
         public static void Render(Graphics g, Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp)
@@ -461,7 +485,9 @@ namespace ScreenShift
                 case Keys.D: resolutionBox.Checked = !resolutionBox.Checked; break;
                 case Keys.F6: if (MatchArea) { resolutionList.Focus(); resolutionList.DroppedDown = true; } return true;
                 case Keys.F7: languageList.Focus(); languageList.DroppedDown = true; return true;
-                case Keys.Enter: DialogResult = DialogResult.OK; return true;
+                case Keys.Enter:
+                    if (MatchArea && resolutionList.SelectedItem == null) { MessageBox.Show(L.Get("noValidated"), L.Caption); return true; }
+                    DialogResult = DialogResult.OK; return true;
                 case Keys.R: DialogResult = DialogResult.Retry; return true;
                 case Keys.Escape: DialogResult = DialogResult.Cancel; return true;
                 default: return base.ProcessCmdKey(ref msg, keyData);
@@ -485,8 +511,8 @@ namespace ScreenShift
             int listWidth = Math.Min(240, rowWidth / 2);
             resolutionBox.SetBounds(left, panel.Height - CutBottom - 56, rowWidth - listWidth, 32);
             resolutionList.SetBounds(left + rowWidth - listWidth, panel.Height - CutBottom - 52, listWidth, 32);
-            resolutionList.Enabled = MatchArea;
             UpdateResolutions();
+            resolutionList.Enabled = MatchArea && resolutionList.Items.Count > 0;
         }
 
         sealed class ResolutionChoice
@@ -504,25 +530,29 @@ namespace ScreenShift
             try
             {
                 resolutionList.Items.Clear();
-                var widths = new List<int> { 0, 960, 1280, 1366, 1600, 1920, 2560, 3840 };
-                var ultrawide = Planner.UltrawideModes();
-                var fixedModes = new List<Size>(ultrawide);
-                fixedModes.AddRange(Planner.DriverModes());
-                foreach (Size mode in Planner.NearestAspectModes(area, fixedModes)) widths.Add(Planner.DriverKey(mode));
-                if (resolutionWidth > 0 && resolutionWidth <= 8192 && !widths.Contains(resolutionWidth)) widths.Add(resolutionWidth);
-                int selected = 0;
-                foreach (int w in widths)
+                Rectangle rectangle = new Rectangle(CutLeft, CutTop, area.Width, area.Height);
+                if (validatedModes == null || validatedArea != rectangle)
                 {
-                    Size s = Planner.AreaResolution(area, w);
-                    if (s.IsEmpty) continue;
-                    var choice = new ResolutionChoice { Width = w, Label = s.Width + " × " + s.Height +
-                        (w == 0 ? L.Get("native") : w > 8192 ?
-                            (Planner.DriverModes().Contains(s) ? L.Get("driver") : ultrawide.Contains(s) ? L.Get("ultrawide") : L.Get("custom")) : L.Get("custom")) };
-                    int index = resolutionList.Items.Add(choice);
-                    if (w == resolutionWidth) selected = index;
+                    validatedModes = Planner.ValidatedNearestModes(rectangle, Planner.DriverModes(), validateMode);
+                    validatedArea = rectangle;
                 }
-                resolutionList.SelectedIndex = selected;
-                resolutionWidth = ((ResolutionChoice)resolutionList.SelectedItem).Width;
+                int selected = 0;
+                double best = double.MaxValue;
+                Size desired = Planner.AreaResolution(area, resolutionWidth);
+                foreach (Size s in validatedModes)
+                {
+                    int w = Planner.DriverKey(s);
+                    var choice = new ResolutionChoice { Width = w, Label = s.Width + " × " + s.Height + " — " + Planner.AspectLabel(s) + L.Get("validated") };
+                    int index = resolutionList.Items.Add(choice);
+                    double distance = w == resolutionWidth ? -1 : Math.Abs(Math.Log((double)s.Width / Math.Max(1, desired.Width)));
+                    if (distance < best) { best = distance; selected = index; }
+                }
+                if (resolutionList.Items.Count > 0)
+                {
+                    resolutionList.SelectedIndex = selected;
+                    resolutionWidth = ((ResolutionChoice)resolutionList.SelectedItem).Width;
+                }
+                else resolutionWidth = 0;
             }
             finally { resolutionList.EndUpdate(); updatingResolutions = false; }
         }
@@ -652,7 +682,8 @@ namespace ScreenShift
                     L.T("Не удалось временно убрать сдвиг", "Could not temporarily remove the shift"));
 
             DialogResult result;
-            using (var overlay = new Overlay(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, matchArea, resolutionWidth))
+            using (var overlay = new Overlay(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, matchArea, resolutionWidth,
+                (size, rectangle) => current.With(size, rectangle).Apply(DisplayConfig.SDC_VALIDATE)))
             {
                 result = overlay.ShowDialog();
                 cutLeft = overlay.CutLeft;
@@ -691,7 +722,9 @@ namespace ScreenShift
             if (rc != 0 && matchArea && rc != 5 && rc != 50)
             {
                 Rectangle area = new Rectangle(cutLeft, cutTop, current.Panel.Width - cutLeft - cutRight, current.Panel.Height - cutTop - cutBottom);
-                foreach (Size candidate in Planner.CompatibleCandidates(newDesktop, area, Planner.DriverModes()))
+                var verified = Planner.ValidatedNearestModes(area, Planner.DriverModes(),
+                    (size, rectangle) => current.With(size, rectangle).Apply(DisplayConfig.SDC_VALIDATE));
+                foreach (Size candidate in Planner.CompatibleCandidates(newDesktop, area, verified))
                 {
                     Rectangle candidateRegion = Planner.Fit(candidate, area);
                     if (candidate == newDesktop && candidateRegion == newRegion) continue;

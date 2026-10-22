@@ -25,10 +25,12 @@ namespace ScreenShift
             File.WriteAllText(LanguageFile, Language);
         }
         static readonly Dictionary<string, string[]> Texts = new Dictionary<string, string[]> {
+            { "validated", new[] { " (validated)", "（已验证）", "（検証済み）", " (검증됨)", " (проверено)" } },
+            { "noValidated", new[] { "No driver resolution passed validation for this area. Adjust the edges or disable area resolution.", "当前选区没有通过验证的驱动分辨率，请调整边界或取消选区分辨率。", "この領域で検証を通過した解像度がありません。境界を調整するか領域解像度を無効にしてください。", "이 영역에 대해 검증된 해상도가 없습니다. 경계를 조정하거나 영역 해상도를 끄세요.", "Для этой области нет проверенного режима. Измените границы или отключите разрешение по области." } },
             { "ultrawide", new[] { " (ultrawide test; may letterbox)", "（超宽测试；可能留边）", "（ウルトラワイド試験・余白あり）", " (울트라와이드 테스트; 여백 가능)", " (сверхширокий тест; возможны поля)" } },
             { ": error code ", new[] { ": error code ", "：错误码 ", "：エラーコード ", ": 오류 코드 ", ": код ошибки " } },
             { "aspect", new[] { "Keep original aspect ratio (A; Fill only)", "保持原始比例（A；仅 Fill）", "元の縦横比を維持（A・Fill のみ）", "원래 화면 비율 유지 (A; Fill 전용)", "Сохранять пропорции (A; только Fill)" } },
-            { "area", new[] { "Match desktop to selected area (D)", "按选区比例设置分辨率（D）", "選択領域に解像度を合わせる（D）", "선택 영역에 해상도 맞추기 (D)", "Разрешение по области (D)" } },
+            { "area", new[] { "Compatible resolution for area (D)", "按选区选择兼容分辨率（D）", "領域に合う対応解像度（D）", "영역에 맞는 호환 해상도 (D)", "Совместимое разрешение (D)" } },
             { "instructions", new[] {
                 "Yellow: boundaries. Red: excluded area.\nLeft/Right: left edge; Up/Down: bottom edge\nCtrl + arrows: right/top edges; Shift: 20 px; Alt: 1 px\nClick the background to adjust edges. D: area resolution; F6: resolution list.\n\nLeft {0}  Top {1}  Right {2}  Bottom {3} px\nTab: mode — {4}\n\nEnter: apply   R: reset   Esc: cancel",
                 "黄线是显示边界，红色区域将留黑。\n← → 调整左边；↑ ↓ 调整下边\nCtrl + 方向键调整右边／上边；Shift：20 像素；Alt：1 像素\n点击背景后调整边界。D：选区分辨率；F6：选择分辨率。\n\n左 {0}  上 {1}  右 {2}  下 {3} 像素\nTab 切换模式：{4}\n\nEnter 应用   R 重置   Esc 取消",

@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
 [void][Reflection.Assembly]::LoadFrom((Join-Path (Split-Path $PSScriptRoot -Parent) 'dist\ScreenShift.exe'))
@@ -111,7 +111,11 @@ foreach ($width in @(960,1280,1366,1600,1920,2560,3840)) {
 }
 Assert (-not [ScreenShift.Planner]::Plan($panel,0,0,0,0,$false,$true,$true,8193,[ref]$desktop,[ref]$region)) 'Oversized resolution accepted'
 Assert ([ScreenShift.Planner]::AreaResolution((New-Object Drawing.Size(1600,900)),1920) -eq (New-Object Drawing.Size(1920,1080))) '16:9 option incorrect'
-$overlay = New-Object ScreenShift.Overlay($panel,100,50,200,150,$false,$true,$false,0)
+$driverModes = New-Object 'Collections.Generic.List[Drawing.Size]'
+foreach ($w in @(1280,1600,1920)) { $driverModes.Add((New-Object Drawing.Size($w,($w*9/16)))) }
+[ScreenShift.Planner].GetField('driverModes',$flags).SetValue($null,$driverModes)
+$accept = [Func[Drawing.Size,Drawing.Rectangle,int]] { param($size,$rectangle) 0 }
+$overlay = New-Object ScreenShift.Overlay($panel,100,50,200,150,$false,$true,$false,0,$accept)
 try {
     $aspect = $overlay.Controls[0]
     $area = $overlay.Controls[1]
@@ -119,10 +123,10 @@ try {
     Assert (-not $list.Enabled) 'Resolution list enabled without area mode'
     Press ([Windows.Forms.Keys]::D)
     Assert ($overlay.MatchArea -and $list.Enabled -and -not $aspect.Enabled) 'D toggle did not activate area mode'
-    $list.SelectedIndex = 5
-    Assert ($overlay.ResolutionWidth -eq 1920 -and $list.Text -like '1920*1043*') 'Resolution selection incorrect'
+    $list.SelectedIndex = 2
+    Assert ($overlay.ResolutionWidth -eq 19201080 -and $list.Text -like '1920*1080*16:9*') 'Resolution selection incorrect'
     Press ([Windows.Forms.Keys]::Down)
-    Assert ($overlay.ResolutionWidth -eq 1920 -and $list.Text -like '1920*1048*') 'Resolution did not track changed area'
+    Assert ($overlay.ResolutionWidth -eq 19201080 -and $list.Text -like '1920*1080*16:9*') 'Resolution did not track changed area'
     Assert ($list.Right -le 1720 -and $list.Bottom -le 934) 'Resolution list outside usable area'
     Press ([Windows.Forms.Keys]::D)
     Assert (-not $overlay.MatchArea -and $aspect.Enabled -and -not $list.Enabled) 'Original mode not restored'
