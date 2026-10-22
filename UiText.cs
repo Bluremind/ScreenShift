@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -6,8 +6,9 @@ namespace ScreenShift
 {
     public static class L
     {
-        public static readonly string[] Codes = { "en", "zh", "ja", "ko", "ru" };
-        public static readonly string[] Names = { "English", "简体中文", "日本語", "한국어", "Русский" };
+        public static readonly string[] Codes = { "zh", "en", "ru", "ja", "ko" };
+        static readonly string[] TranslationCodes = { "en", "zh", "ja", "ko", "ru" };
+        public static readonly string[] Names = { "简体中文", "English", "Русский", "日本語", "한국어" };
         public static string Language = Normalize(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
         public static bool Russian { get { return Language == "ru"; } set { Language = value ? "ru" : "en"; } }
         public static string Caption { get { return "ScreenShift"; } }
@@ -63,7 +64,7 @@ namespace ScreenShift
             { "Could not temporarily remove the shift", new[] { "Could not temporarily remove the shift", "无法临时恢复全屏", "一時的に全画面に戻せません", "일시적으로 전체 화면으로 복원할 수 없습니다", "Не удалось временно убрать сдвиг" } },
             { "single", new[] { "Exactly one active display is required (active paths: {0}).", "需要且仅支持一个活动显示器（当前路径数：{0}）。", "有効なディスプレイは1台のみ対応します（現在：{0}）。", "활성 디스플레이는 하나만 지원됩니다 (현재: {0}).", "Нужен один активный экран (путей: {0})." } }
         };
-        public static string Get(string key) { string[] values; return Texts.TryGetValue(key, out values) ? values[Math.Max(0, Array.IndexOf(Codes, Language))] : key; }
+        public static string Get(string key) { string[] values; return Texts.TryGetValue(key, out values) ? values[Math.Max(0, Array.IndexOf(TranslationCodes, Language))] : key; }
         public static string F(string key, params object[] args) { return string.Format(Get(key), args); }
         public static string T(string ru, string en) { return Texts.ContainsKey(en) ? Get(en) : Russian ? ru : en; }
     }

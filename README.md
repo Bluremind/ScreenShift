@@ -22,7 +22,7 @@
 
 **驱动模式保持画面比例，在所选区域内居中显示，可能留黑边。** 对于驱动不支持的任意比例，不能保证“正常比例、不留黑边、任意分辨率”三者同时成立。不会自动改回拉伸模式，也不使用允许系统任意调整模式的标志。
 
-说明区域上方新增 **Language / 语言** 下拉框（快捷键 **F7**）：English、简体中文、日本語、한국어、Русский。选中后即时更新说明、选项和确认对话框，独立保存于 `%LOCALAPPDATA%\ScreenShift\language.txt`。命令行 `--lang=en|zh|ja|ko|ru` 可覆盖本次启动语言；旧的显示配置保持兼容。源码翻译表位于 `UiText.cs`。
+说明区域上方新增 **Language / 语言** 下拉框（快捷键 **F7**）：简体中文、English、Русский、日本語、한국어。选中后即时更新说明、选项和确认对话框，独立保存于 `%LOCALAPPDATA%\ScreenShift\language.txt`。命令行 `--lang=en|zh|ja|ko|ru` 可覆盖本次启动语言；旧的显示配置保持兼容。源码翻译表位于 `UiText.cs`。
 
 **English:** Custom resolutions derived from a selection may be rejected by the GPU driver even when their geometry is correct. The dropdown now labels custom and driver-enumerated resolutions separately. On validation failure, the app ranks driver modes by aspect ratio and size and validates candidates without applying them. It asks before trying a validated alternative, then retains the 20-second keep/revert trial. Driver modes preserve proportions and may leave margins inside the selected region. Exact arbitrary aspect ratios without margins cannot be guaranteed on unsupported hardware.
 
@@ -201,7 +201,7 @@ Public source availability does not grant unrestricted redistribution rights. Fo
 
 ## 签名与校验 / Signing and verification
 
-本 fork 版本标识为 `1.4.0-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
+本 fork 版本标识为 `1.4.1-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
 
 **本机测试签名（Hao）：**
 
@@ -221,7 +221,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Sign -Certifica
 
 默认从 `CurrentUser\My` 选取证书；机器证书库使用 `-MachineStore`。脚本检查证书、执行 SHA-256 签名和时间戳、验证信任及签名者，成功后才写入校验文件。不要把私钥或密码提交到 Git。云签名服务需要对应服务配置，此脚本的证书库方式不自动配置云账号。
 
-**English:** The fork is identified as `1.4.0-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
+**English:** The fork is identified as `1.4.1-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
 
 For trusted signing, obtain a code-signing certificate, configure private-key access and install the Windows SDK Signing Tools. Run `build.ps1 -Sign` using the certificate thumbprint, SignTool path and your provider's RFC 3161 timestamp URL as shown above. The script validates the selected certificate, signs with SHA-256, timestamps, verifies the result, then writes the checksum. Cloud-signing accounts require provider-specific setup. Neither self-signing nor trusted signing bypasses Gmail's executable-attachment policy or guarantees SmartScreen reputation. Distribution still requires the author's permission.
 
