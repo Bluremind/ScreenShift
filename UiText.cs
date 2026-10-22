@@ -6,9 +6,9 @@ namespace ScreenShift
 {
     public static class L
     {
-        public static readonly string[] Codes = { "zh", "en", "ru", "ja", "ko" };
+        public static readonly string[] Codes = { "en", "zh", "ru", "ja", "ko" };
         static readonly string[] TranslationCodes = { "en", "zh", "ja", "ko", "ru" };
-        public static readonly string[] Names = { "简体中文", "English", "Русский", "日本語", "한국어" };
+        public static readonly string[] Names = { "English", "简体中文", "Русский", "日本語", "한국어" };
         public static string Language = Normalize(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
         public static bool Russian { get { return Language == "ru"; } set { Language = value ? "ru" : "en"; } }
         public static string Caption { get { return "ScreenShift"; } }
@@ -25,6 +25,7 @@ namespace ScreenShift
             File.WriteAllText(LanguageFile, Language);
         }
         static readonly Dictionary<string, string[]> Texts = new Dictionary<string, string[]> {
+            { "ultrawide", new[] { " (ultrawide test; may letterbox)", "（超宽测试；可能留边）", "（ウルトラワイド試験・余白あり）", " (울트라와이드 테스트; 여백 가능)", " (сверхширокий тест; возможны поля)" } },
             { ": error code ", new[] { ": error code ", "：错误码 ", "：エラーコード ", ": 오류 코드 ", ": код ошибки " } },
             { "aspect", new[] { "Keep original aspect ratio (A; Fill only)", "保持原始比例（A；仅 Fill）", "元の縦横比を維持（A・Fill のみ）", "원래 화면 비율 유지 (A; Fill 전용)", "Сохранять пропорции (A; только Fill)" } },
             { "area", new[] { "Match desktop to selected area (D)", "按选区比例设置分辨率（D）", "選択領域に解像度を合わせる（D）", "선택 영역에 해상도 맞추기 (D)", "Разрешение по области (D)" } },

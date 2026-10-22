@@ -138,6 +138,15 @@ namespace ScreenShift
     {
         static List<Size> crispModes;
         static List<Size> driverModes;
+        public static List<Size> UltrawideModes()
+        {
+            return new List<Size> {
+                // Exact ratios within each family; 2560x1080 and 3440x1440 differ slightly.
+                new Size(1280, 540), new Size(1920, 810), new Size(2560, 1080),
+                new Size(1720, 720), new Size(2580, 1080), new Size(3440, 1440),
+                new Size(1920, 540), new Size(2560, 720), new Size(3840, 1080), new Size(5120, 1440)
+            };
+        }
         public static List<Size> DriverModes()
         {
             if (driverModes != null) return driverModes;
@@ -312,6 +321,7 @@ namespace ScreenShift
             };
             resolutionList = new ComboBox {
                 DropDownStyle = ComboBoxStyle.DropDownList,
+                DropDownWidth = 440, IntegralHeight = false, MaxDropDownItems = 16,
                 Font = new Font("Segoe UI", 14f, GraphicsUnit.Pixel),
                 AccessibleName = "Desktop resolution"
             };
@@ -478,7 +488,10 @@ namespace ScreenShift
             {
                 resolutionList.Items.Clear();
                 var widths = new List<int> { 0, 960, 1280, 1366, 1600, 1920, 2560, 3840 };
-                foreach (Size driver in Planner.DriverModes()) widths.Add(Planner.DriverKey(driver));
+                var ultrawide = Planner.UltrawideModes();
+                foreach (Size preset in ultrawide) widths.Add(Planner.DriverKey(preset));
+                foreach (Size driver in Planner.DriverModes())
+                    if (!widths.Contains(Planner.DriverKey(driver))) widths.Add(Planner.DriverKey(driver));
                 if (resolutionWidth > 0 && !widths.Contains(resolutionWidth)) widths.Add(resolutionWidth);
                 int selected = 0;
                 foreach (int w in widths)
@@ -486,7 +499,8 @@ namespace ScreenShift
                     Size s = Planner.AreaResolution(area, w);
                     if (s.IsEmpty) continue;
                     var choice = new ResolutionChoice { Width = w, Label = s.Width + " × " + s.Height +
-                        (w == 0 ? L.Get("native") : w > 8192 ? L.Get("driver") : L.Get("custom")) };
+                        (w == 0 ? L.Get("native") : w > 8192 ?
+                            (Planner.DriverModes().Contains(s) ? L.Get("driver") : ultrawide.Contains(s) ? L.Get("ultrawide") : L.Get("custom")) : L.Get("custom")) };
                     int index = resolutionList.Items.Add(choice);
                     if (w == resolutionWidth) selected = index;
                 }

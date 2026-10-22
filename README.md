@@ -14,6 +14,22 @@
 
 > 本版本界面支持中文、英语、日语、韩语和俄语，可在 Language 下拉框即时切换。下方保留的原项目介绍、截图和官方下载链接描述的是上游版本；上游 EXE 不包含本 fork 的四边修改。本 fork 目前没有发布修改版 EXE。
 
+## v1.5.0：超宽屏测试预设 / Ultrawide test presets
+
+语言顺序为 **English → 简体中文 → Русский → 日本語 → 한국어**。启用选区分辨率后，下拉列表新增以下固定尺寸；每行中的尺寸具有完全相同的比例：
+
+| 比例 / Exact ratio | 分辨率 / Resolutions |
+| --- | --- |
+| 64:27 | 1280×540、1920×810、2560×1080 |
+| 43:18 | 1720×720、2580×1080、3440×1440 |
+| 32:9 | 1920×540、2560×720、3840×1080、5120×1440 |
+
+2560×1080 和 3440×1440 常被统称为 21:9，但实际比例略有不同，因此低分辨率预设分成两组。下拉列表可以滚动，**F6** 打开后用方向键或 End 浏览，不以 1920 为上限。
+
+除非驱动确实枚举了相同尺寸，否则这些选项标记为“超宽测试”，不是保证支持的模式。应用前仍由 Windows 验证，失败时提供经过验证的替代方案；不会直接修改显示器 EDID 或安装驱动。画面保持所选桌面的比例，居中放入裁切区域，区域比例不匹配时可能留边。真正应用的效果需要在目标显卡上确认。
+
+**English:** The language order is English, Simplified Chinese, Russian, Japanese, Korean. The resolution dropdown now includes the fixed ultrawide presets above, with exact-ratio lower-resolution variants in each row. The two commonly named 21:9 families have slightly different exact ratios. Scroll the dropdown (F6, arrow keys, End) to see all choices. Presets are labelled as ultrawide tests unless enumerated by the driver. Windows validates them before applying; driver support is not guaranteed. They preserve desktop proportions within the selected rectangle and may leave margins when its ratio differs. No EDID or driver changes are made.
+
 ## v1.4.0：驱动兼容模式与五种语言 / Driver compatibility and five languages
 
 **非标准比例被 Windows 拒绝的原因：** 按选区比例计算出的分辨率（如 1620×880、1920×1043）不一定被显卡驱动支持。尺寸计算正确不代表 Windows 能应用它。本机只读诊断中这些自定义模式返回错误码 31，而枚举出的标准模式通过验证。
@@ -22,7 +38,7 @@
 
 **驱动模式保持画面比例，在所选区域内居中显示，可能留黑边。** 对于驱动不支持的任意比例，不能保证“正常比例、不留黑边、任意分辨率”三者同时成立。不会自动改回拉伸模式，也不使用允许系统任意调整模式的标志。
 
-说明区域上方新增 **Language / 语言** 下拉框（快捷键 **F7**）：简体中文、English、Русский、日本語、한국어。选中后即时更新说明、选项和确认对话框，独立保存于 `%LOCALAPPDATA%\ScreenShift\language.txt`。命令行 `--lang=en|zh|ja|ko|ru` 可覆盖本次启动语言；旧的显示配置保持兼容。源码翻译表位于 `UiText.cs`。
+说明区域上方新增 **Language / 语言** 下拉框（快捷键 **F7**）：English、简体中文、Русский、日本語、한국어。选中后即时更新说明、选项和确认对话框，独立保存于 `%LOCALAPPDATA%\ScreenShift\language.txt`。命令行 `--lang=en|zh|ja|ko|ru` 可覆盖本次启动语言；旧的显示配置保持兼容。源码翻译表位于 `UiText.cs`。
 
 **English:** Custom resolutions derived from a selection may be rejected by the GPU driver even when their geometry is correct. The dropdown now labels custom and driver-enumerated resolutions separately. On validation failure, the app ranks driver modes by aspect ratio and size and validates candidates without applying them. It asks before trying a validated alternative, then retains the 20-second keep/revert trial. Driver modes preserve proportions and may leave margins inside the selected region. Exact arbitrary aspect ratios without margins cannot be guaranteed on unsupported hardware.
 
@@ -201,7 +217,7 @@ Public source availability does not grant unrestricted redistribution rights. Fo
 
 ## 签名与校验 / Signing and verification
 
-本 fork 版本标识为 `1.4.1-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
+本 fork 版本标识为 `1.5.0-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
 
 **本机测试签名（Hao）：**
 
@@ -221,7 +237,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Sign -Certifica
 
 默认从 `CurrentUser\My` 选取证书；机器证书库使用 `-MachineStore`。脚本检查证书、执行 SHA-256 签名和时间戳、验证信任及签名者，成功后才写入校验文件。不要把私钥或密码提交到 Git。云签名服务需要对应服务配置，此脚本的证书库方式不自动配置云账号。
 
-**English:** The fork is identified as `1.4.1-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
+**English:** The fork is identified as `1.5.0-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
 
 For trusted signing, obtain a code-signing certificate, configure private-key access and install the Windows SDK Signing Tools. Run `build.ps1 -Sign` using the certificate thumbprint, SignTool path and your provider's RFC 3161 timestamp URL as shown above. The script validates the selected certificate, signs with SHA-256, timestamps, verifies the result, then writes the checksum. Cloud-signing accounts require provider-specific setup. Neither self-signing nor trusted signing bypasses Gmail's executable-attachment policy or guarantees SmartScreen reputation. Distribution still requires the author's permission.
 

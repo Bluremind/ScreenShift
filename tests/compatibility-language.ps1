@@ -67,3 +67,28 @@ try {
     if (Test-Path -LiteralPath $tempLanguage) { Remove-Item -LiteralPath $tempLanguage }
 }
 'PASS: driver dimensions and proportional fit, persisted driver selection, five languages, live switching, confirmation labels and rendering. No display settings changed.'
+Assert (([ScreenShift.L]::Codes -join ',') -eq 'en,zh,ru,ja,ko') 'Language display order incorrect'
+$overlay = New-Object ScreenShift.Overlay($panel,100,50,200,150,$false,$true,$true,0)
+try {
+    $list = $overlay.Controls[2]
+    foreach ($preset in [ScreenShift.Planner]::UltrawideModes()) {
+        $key = [ScreenShift.Planner]::DriverKey($preset)
+        $found = $false
+        for ($i=0; $i -lt $list.Items.Count; $i++) {
+            $item = $list.Items[$i]
+            if ($item.GetType().GetField('Width').GetValue($item) -eq $key) {
+                $list.SelectedIndex = $i
+                $found = $true
+                break
+            }
+        }
+        Assert ($found -and $overlay.ResolutionWidth -eq $key) 'Ultrawide preset missing from dropdown'
+        Assert ([ScreenShift.Planner]::Plan($panel,100,50,200,150,$false,$true,$true,$key,[ref]$d,[ref]$r)) 'Ultrawide plan failed'
+        Assert ($d -eq $preset -and $area.Contains($r)) 'Preset resolution or region incorrect'
+        Assert ([Math]::Abs($r.Width * [double]$d.Height / $d.Width - $r.Height) -le 1) 'Ultrawide preset stretched'
+    }
+    Assert ((1280*1080 -eq 540*2560) -and (1920*1080 -eq 810*2560)) '64:27 preset ratio mismatch'
+    Assert ((1720*1440 -eq 720*3440) -and (2580*1440 -eq 1080*3440)) '43:18 preset ratio mismatch'
+    Assert ((1920*1440 -eq 540*5120) -and (2560*1440 -eq 720*5120) -and (3840*1440 -eq 1080*5120)) '32:9 preset ratio mismatch'
+} finally { $overlay.Dispose() }
+'PASS: English-first language order, all 10 ultrawide presets visible/selectable, exact ratio families and proportional placement.'
