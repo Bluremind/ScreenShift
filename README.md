@@ -32,7 +32,7 @@ Windows has no setting for "this part of my screen is dead". Moving windows arou
 ScreenShift asks Windows' display stack to draw the desktop inside a smaller rectangle of the panel. Everything is moved together, so nothing hides under the dead area. The dead strips simply stay black.
 
 - **Everything fits.** Taskbar, Start button, icons, maximized windows.
-- **Calibrate in 30 seconds.** Drag two yellow lines with the arrow keys until they touch the dead strip.
+- **Calibrate in 30 seconds.** Move four yellow lines with the arrow keys until they touch the dead strip.
 - **Safe by design.** After applying, you have 20 seconds to press **Keep**. Do nothing and the old picture comes back on its own.
 - **Remembers your setup.** Re-apply it any time with `ScreenShift.exe --apply`.
 - **Two quality modes.** *Crisp* shows the desktop 1:1 at the largest standard resolution that fits. *Fill* uses the whole good area and scales the picture slightly.
@@ -43,7 +43,7 @@ ScreenShift asks Windows' display stack to draw the desktop inside a smaller rec
 
 1. Download **`ScreenShift.exe`** from the [latest release](https://github.com/Bluremind/ScreenShift/releases/latest).
 2. Run it. A calibration screen opens.
-3. Use the arrow keys to move the **yellow lines** next to the dead strips. Hold **Shift** to move faster.
+3. Use the arrow keys to move the **yellow lines** next to the dead strips. The arrows move the left and bottom lines, with **Ctrl** held they move the right and top ones. Hold **Shift** to move faster.
 4. Press **Tab** to choose *Crisp* or *Fill*, then **Enter** to apply.
 5. Press **Keep** within 20 seconds. Done.
 
@@ -64,7 +64,7 @@ ScreenShift asks Windows' display stack to draw the desktop inside a smaller rec
 | `ScreenShift.exe --reset` | Remove the shift and delete the saved settings. |
 | `--lang=en` or `--lang=ru` | Add to any command to choose the interface language. |
 
-Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt` as three values: pixels cut on the left, pixels cut at the bottom, and the mode.
+Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt` as five values: pixels cut on the left, top, right and bottom, and the mode (`crisp` or `fill`). Settings saved by version 1.1 and older (left, bottom, mode) still work.
 
 ### Re-apply after every boot
 
@@ -117,11 +117,17 @@ English and Russian. ScreenShift picks Russian when Windows is set to Russian an
 
 ScreenShift changes display settings, so you should be able to check what you run.
 
-- The whole program is one file: [`ScreenShift.cs`](ScreenShift.cs), about 450 lines. It makes no network calls and writes only `settings.txt`.
+- The whole program is one file: [`ScreenShift.cs`](ScreenShift.cs), about 550 lines. It makes no network calls and writes only `settings.txt`.
 - Build it yourself in seconds with the C# compiler that ships with Windows, no SDK needed:
 
   ```powershell
   powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+  ```
+
+- The geometry and key checks run against the built exe and never touch your display settings:
+
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
   ```
 
 - The release page lists the **SHA-256** of the published exe.

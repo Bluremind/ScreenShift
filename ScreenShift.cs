@@ -165,17 +165,21 @@ namespace ScreenShift
             return crispModes = list;
         }
 
-        // Visible part of the panel is [cutLeft, W) x [0, H - cutBottom).
-        public static bool Plan(Size panel, int cutLeft, int cutBottom, bool crisp, out Size desktop, out Rectangle region)
+        // Cuts are measured inward from each physical panel edge.
+        public static bool Plan(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, out Size desktop, out Rectangle region)
         {
-            int vw = panel.Width - cutLeft, vh = panel.Height - cutBottom;
+            desktop = Size.Empty;
+            region = Rectangle.Empty;
+            if (panel.Width <= 0 || panel.Height <= 0 || cutLeft < 0 || cutTop < 0 || cutRight < 0 || cutBottom < 0 ||
+                (long)cutLeft + cutRight >= panel.Width || (long)cutTop + cutBottom >= panel.Height) return false;
+            int vw = panel.Width - cutLeft - cutRight, vh = panel.Height - cutTop - cutBottom;
             if (crisp)
             {
                 foreach (Size m in CrispModes(panel))
                 {
                     if (m.Width > vw || m.Height > vh) continue;
                     desktop = m;
-                    region = new Rectangle(cutLeft + (vw - m.Width) / 2, (vh - m.Height) / 2, m.Width, m.Height);
+                    region = new Rectangle(cutLeft + (vw - m.Width) / 2, cutTop + (vh - m.Height) / 2, m.Width, m.Height);
                     return true;
                 }
                 desktop = Size.Empty;
@@ -184,23 +188,27 @@ namespace ScreenShift
             }
             double s = Math.Min((double)vw / panel.Width, (double)vh / panel.Height);
             int rw = (int)Math.Round(panel.Width * s), rh = (int)Math.Round(panel.Height * s);
+            if (rw < 1 || rh < 1) return false;
             desktop = panel;
-            region = new Rectangle(cutLeft + (vw - rw) / 2, (vh - rh) / 2, rw, rh);
+            region = new Rectangle(cutLeft + (vw - rw) / 2, cutTop + (vh - rh) / 2, rw, rh);
             return true;
         }
     }
 
     public class Overlay : Form
     {
-        public int CutLeft, CutBottom;
+        public int CutLeft, CutTop, CutRight, CutBottom;
         public bool Crisp;
         readonly Size panel;
 
-        public Overlay(Size panel, int cutLeft, int cutBottom, bool crisp)
+        public Overlay(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp)
         {
             this.panel = panel;
             CutLeft = cutLeft;
+            CutTop = cutTop;
+            CutRight = cutRight;
             CutBottom = cutBottom;
+            ClampCuts();
             Crisp = crisp;
             Text = L.Caption;
             FormBorderStyle = FormBorderStyle.None;
@@ -225,15 +233,15 @@ namespace ScreenShift
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            Render(e.Graphics, panel, CutLeft, CutBottom, Crisp);
+            Render(e.Graphics, panel, CutLeft, CutTop, CutRight, CutBottom, Crisp);
         }
 
-        public static void Render(Graphics g, Size panel, int cutLeft, int cutBottom, bool crisp)
+        public static void Render(Graphics g, Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp)
         {
-            int w = panel.Width, h = panel.Height, lineY = h - cutBottom;
+            int w = panel.Width, h = panel.Height, lineY = h - cutBottom, lineX = w - cutRight;
             Size desktop;
             Rectangle region;
-            bool fits = Planner.Plan(panel, cutLeft, cutBottom, crisp, out desktop, out region);
+            bool fits = Planner.Plan(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, out desktop, out region);
 
             g.Clear(Color.FromArgb(24, 24, 24));
             if (fits)
@@ -241,12 +249,17 @@ namespace ScreenShift
             using (var hatch = new HatchBrush(HatchStyle.WideDownwardDiagonal, Color.FromArgb(210, 50, 50), Color.FromArgb(70, 0, 0)))
             {
                 g.FillRectangle(hatch, 0, 0, cutLeft, h);
-                g.FillRectangle(hatch, cutLeft, lineY, w - cutLeft, cutBottom);
+                g.FillRectangle(hatch, lineX, 0, cutRight, h);
+                g.FillRectangle(hatch, cutLeft, 0, lineX - cutLeft, cutTop);
+                g.FillRectangle(hatch, cutLeft, lineY, lineX - cutLeft, cutBottom);
             }
             using (var yellow = new SolidBrush(Color.Yellow))
             {
-                g.FillRectangle(yellow, cutLeft, 0, 8, lineY);
-                g.FillRectangle(yellow, cutLeft, lineY - 8, w - cutLeft, 8);
+                int thickness = Math.Min(8, Math.Min(lineX - cutLeft, lineY - cutTop));
+                g.FillRectangle(yellow, cutLeft, cutTop, thickness, lineY - cutTop);
+                g.FillRectangle(yellow, lineX - thickness, cutTop, thickness, lineY - cutTop);
+                g.FillRectangle(yellow, cutLeft, cutTop, lineX - cutLeft, thickness);
+                g.FillRectangle(yellow, cutLeft, lineY - thickness, lineX - cutLeft, thickness);
             }
 
             string mode = crisp
@@ -257,21 +270,24 @@ namespace ScreenShift
             string body = L.Russian
                 ? "Жёлтые линии — новые края картинки. Всё красное станет чёрным.\n" +
                   "← →  двигать левую линию      ↑ ↓  двигать нижнюю      Shift — быстрее\n" +
+                  "Ctrl + ← →  двигать правую линию      Ctrl + ↑ ↓  двигать верхнюю\n" +
                   "Подведите каждую линию вплотную к чёрной полосе, но так, чтобы её ещё было видно.\n" +
                   "Если клавиши не действуют — щёлкните по экрану.\n\n" +
-                  string.Format("Слева убрать: {0} px      Снизу убрать: {1} px\n", cutLeft, cutBottom) +
+                  string.Format("Слева: {0} px   Сверху: {1} px   Справа: {2} px   Снизу: {3} px\n", cutLeft, cutTop, cutRight, cutBottom) +
                   "Tab — режим: " + mode + "\n\n" +
                   "Enter — применить      R — убрать сдвиг      Esc — выйти"
                 : "Yellow lines are the new edges of the picture. Everything red will turn black.\n" +
                   "← →  move the left line      ↑ ↓  move the bottom line      Shift — faster\n" +
+                  "Ctrl + ← →  move the right line      Ctrl + ↑ ↓  move the top line\n" +
                   "Place each line right next to the dead strip, but keep the strip itself out of view.\n" +
                   "If the keys do nothing, click on the screen.\n\n" +
-                  string.Format("Cut from the left: {0} px      Cut from the bottom: {1} px\n", cutLeft, cutBottom) +
+                  string.Format("Left: {0} px   Top: {1} px   Right: {2} px   Bottom: {3} px\n", cutLeft, cutTop, cutRight, cutBottom) +
                   "Tab — mode: " + mode + "\n\n" +
                   "Enter — apply      R — remove the shift      Esc — exit";
 
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-            var visible = new Rectangle(cutLeft + 8, 0, w - cutLeft - 8, lineY - 8);
+            var visible = new Rectangle(cutLeft + 8, cutTop + 8, lineX - cutLeft - 16, lineY - cutTop - 16);
+            if (visible.Width <= 0 || visible.Height <= 0) return;
             using (var title = new Font("Segoe UI", h / 30f, FontStyle.Bold, GraphicsUnit.Pixel))
             using (var font = new Font("Segoe UI", h / 50f, GraphicsUnit.Pixel))
             using (var fmt = new StringFormat { Alignment = StringAlignment.Center })
@@ -287,22 +303,37 @@ namespace ScreenShift
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             int step = (keyData & Keys.Shift) != 0 ? 20 : 4;
+            int maxX = Math.Max(0, panel.Width - Math.Min(640, panel.Width));
+            int maxY = Math.Max(0, panel.Height - Math.Min(360, panel.Height));
+            bool opposite = (keyData & Keys.Control) != 0;
             switch (keyData & Keys.KeyCode)
             {
-                case Keys.Left: CutLeft -= step; break;
-                case Keys.Right: CutLeft += step; break;
-                case Keys.Up: CutBottom += step; break;
-                case Keys.Down: CutBottom -= step; break;
+                case Keys.Left: if (opposite) CutRight = Math.Min(maxX - CutLeft, CutRight + step); else CutLeft -= step; break;
+                case Keys.Right: if (opposite) CutRight -= step; else CutLeft = Math.Min(maxX - CutRight, CutLeft + step); break;
+                case Keys.Up: if (opposite) CutTop -= step; else CutBottom = Math.Min(maxY - CutTop, CutBottom + step); break;
+                case Keys.Down: if (opposite) CutTop = Math.Min(maxY - CutBottom, CutTop + step); else CutBottom -= step; break;
                 case Keys.Tab: Crisp = !Crisp; break;
                 case Keys.Enter: DialogResult = DialogResult.OK; return true;
                 case Keys.R: DialogResult = DialogResult.Retry; return true;
                 case Keys.Escape: DialogResult = DialogResult.Cancel; return true;
                 default: return base.ProcessCmdKey(ref msg, keyData);
             }
-            CutLeft = Math.Max(0, Math.Min(panel.Width / 3, CutLeft));
-            CutBottom = Math.Max(0, Math.Min(panel.Height / 3, CutBottom));
+            ClampCuts();
             Invalidate();
             return true;
+        }
+
+        void ClampCuts()
+        {
+            // Keep enough room for calibration text, without the old one-third-per-edge limit.
+            int maxX = Math.Max(0, panel.Width - Math.Min(640, panel.Width));
+            int maxY = Math.Max(0, panel.Height - Math.Min(360, panel.Height));
+            CutRight = Math.Max(0, Math.Min(maxX, CutRight));
+            CutLeft = Math.Max(0, Math.Min(maxX - CutRight, CutLeft));
+            CutRight = Math.Min(maxX - CutLeft, CutRight);
+            CutBottom = Math.Max(0, Math.Min(maxY, CutBottom));
+            CutTop = Math.Max(0, Math.Min(maxY - CutBottom, CutTop));
+            CutBottom = Math.Min(maxY - CutTop, CutBottom);
         }
     }
 
@@ -387,9 +418,9 @@ namespace ScreenShift
         static int Run(string command)
         {
             DisplayConfig current = DisplayConfig.Query();
-            int cutLeft = 200, cutBottom = 200;
+            int cutLeft = 0, cutTop = 0, cutRight = 0, cutBottom = 0;
             bool crisp = false;
-            bool saved = Load(ref cutLeft, ref cutBottom, ref crisp);
+            bool saved = Load(ref cutLeft, ref cutTop, ref cutRight, ref cutBottom, ref crisp);
 
             if (command == "--reset")
             {
@@ -401,7 +432,7 @@ namespace ScreenShift
                 if (!saved) return 0;
                 Size desktop;
                 Rectangle region;
-                if (!Planner.Plan(current.Panel, cutLeft, cutBottom, crisp, out desktop, out region)) return 1;
+                if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, out desktop, out region)) return 1;
                 if (current.Desktop == desktop && current.Region == region) return 0;
                 DisplayConfig.Check(current.With(desktop, region).Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
                     L.T("Не удалось применить сдвиг", "Could not apply the shift"));
@@ -415,10 +446,12 @@ namespace ScreenShift
                     L.T("Не удалось временно убрать сдвиг", "Could not temporarily remove the shift"));
 
             DialogResult result;
-            using (var overlay = new Overlay(current.Panel, cutLeft, cutBottom, crisp))
+            using (var overlay = new Overlay(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp))
             {
                 result = overlay.ShowDialog();
                 cutLeft = overlay.CutLeft;
+                cutTop = overlay.CutTop;
+                cutRight = overlay.CutRight;
                 cutBottom = overlay.CutBottom;
                 crisp = overlay.Crisp;
             }
@@ -437,7 +470,7 @@ namespace ScreenShift
 
             Size newDesktop;
             Rectangle newRegion;
-            if (!Planner.Plan(current.Panel, cutLeft, cutBottom, crisp, out newDesktop, out newRegion))
+            if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, out newDesktop, out newRegion))
             {
                 if (wasShifted) Restore(current);
                 MessageBox.Show(L.T(
@@ -463,7 +496,7 @@ namespace ScreenShift
             {
                 DisplayConfig.Check(next.Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
                     L.T("Не удалось сохранить сдвиг", "Could not save the shift"));
-                Save(cutLeft, cutBottom, crisp);
+                Save(cutLeft, cutTop, cutRight, cutBottom, crisp);
             }
             else
             {
@@ -484,22 +517,38 @@ namespace ScreenShift
             if (File.Exists(SettingsFile)) File.Delete(SettingsFile);
         }
 
-        static bool Load(ref int cutLeft, ref int cutBottom, ref bool crisp)
+        static bool Load(ref int cutLeft, ref int cutTop, ref int cutRight, ref int cutBottom, ref bool crisp)
         {
             if (!File.Exists(SettingsFile)) return false;
             string[] parts = File.ReadAllText(SettingsFile).Split(new[] { ' ', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            int l, b;
-            if (parts.Length < 3 || !int.TryParse(parts[0], out l) || !int.TryParse(parts[1], out b)) return false;
+            int l, t = 0, r = 0, b;
+            string mode;
+            if (parts.Length == 3)
+            {
+                // Original settings: left bottom mode.
+                if (!int.TryParse(parts[0], out l) || !int.TryParse(parts[1], out b)) return false;
+                mode = parts[2];
+            }
+            else if (parts.Length == 5)
+            {
+                if (!int.TryParse(parts[0], out l) || !int.TryParse(parts[1], out t) ||
+                    !int.TryParse(parts[2], out r) || !int.TryParse(parts[3], out b)) return false;
+                mode = parts[4];
+            }
+            else return false;
+            if (l < 0 || t < 0 || r < 0 || b < 0 || (mode != "crisp" && mode != "fill")) return false;
             cutLeft = l;
+            cutTop = t;
+            cutRight = r;
             cutBottom = b;
-            crisp = parts[2] == "crisp";
+            crisp = mode == "crisp";
             return true;
         }
 
-        static void Save(int cutLeft, int cutBottom, bool crisp)
+        static void Save(int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile));
-            File.WriteAllText(SettingsFile, cutLeft + " " + cutBottom + " " + (crisp ? "crisp" : "fill"));
+            File.WriteAllText(SettingsFile, cutLeft + " " + cutTop + " " + cutRight + " " + cutBottom + " " + (crisp ? "crisp" : "fill"));
         }
     }
 }
