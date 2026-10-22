@@ -43,7 +43,7 @@ ScreenShift asks Windows' display stack to draw the desktop inside a smaller rec
 
 1. Download **`ScreenShift.exe`** from the [latest release](https://github.com/Bluremind/ScreenShift/releases/latest).
 2. Run it. A calibration screen opens.
-3. Use the arrow keys to move the **yellow lines** next to the dead strips. Hold **Shift** to move faster.
+3. Use the arrow keys to move the **yellow lines** next to the dead strips. The arrows move the left and bottom lines, with **Ctrl** held they move the right and top ones. Hold **Shift** to move faster.
 4. Press **Tab** to choose *Crisp* or *Fill*, then **Enter** to apply.
 5. Press **Keep** within 20 seconds. Done.
 
@@ -64,7 +64,7 @@ ScreenShift asks Windows' display stack to draw the desktop inside a smaller rec
 | `ScreenShift.exe --reset` | Remove the shift and delete the saved settings. |
 | `--lang=en` or `--lang=ru` | Add to any command to choose the interface language. |
 
-Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt` as five values: left, top, right, bottom (pixels), and the mode (`fill` or `crisp`). Original three-value settings (left, bottom, mode) are still accepted, with top and right set to zero.
+Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt` as five values: pixels cut on the left, top, right and bottom, and the mode (`crisp` or `fill`). Settings saved by version 1.1 and older (left, bottom, mode) still work.
 
 ### Re-apply after every boot
 
@@ -117,11 +117,17 @@ English and Russian. ScreenShift picks Russian when Windows is set to Russian an
 
 ScreenShift changes display settings, so you should be able to check what you run.
 
-- The whole program is one file: [`ScreenShift.cs`](ScreenShift.cs), about 450 lines. It makes no network calls and writes only `settings.txt`.
+- The whole program is one file: [`ScreenShift.cs`](ScreenShift.cs), about 550 lines. It makes no network calls and writes only `settings.txt`.
 - Build it yourself in seconds with the C# compiler that ships with Windows, no SDK needed:
 
   ```powershell
   powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+  ```
+
+- The geometry and key checks run against the built exe and never touch your display settings:
+
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
   ```
 
 - The release page lists the **SHA-256** of the published exe.
@@ -151,40 +157,3 @@ The source code is public so you can read and verify it, but this is not an open
 If ScreenShift saved your laptop, a ⭐ helps other people find it.
 
 </div>
-
-## Four-edge calibration (local modification)
-
-All four edges can be adjusted independently. The usable area is rectangular;
-Fill preserves the panel aspect ratio and may leave additional black margins.
-Crisp centers the largest fitting standard resolution inside the selected area.
-
-| Keys | Action |
-| --- | --- |
-| Left / Right | Move the left boundary |
-| Up / Down | Move the bottom boundary |
-| Ctrl + Left / Right | Move the right boundary |
-| Ctrl + Up / Down | Move the top boundary |
-| Shift + movement | Move 20 pixels instead of 4 |
-| Alt + movement | Move 1 pixel |
-| Tab | Toggle Crisp / Fill |
-| Enter | Apply, then confirm Keep within 20 seconds |
-| R / Esc | Reset / cancel |
-
-Boundaries move in the direction of the arrow. Calibration retains at least
-640 x 360 pixels (or the whole panel dimension if smaller) for the instructions.
-There is no longer a one-third-of-panel limit on each edge.
-New installations start with zero cuts. The example settings `100 50 200 150 fill`
-exclude 100 pixels left, 50 top, 200 right, and 150 bottom. Editing the settings
-file alone does not change the display; open calibration to preview and confirm.
-The older screenshots above show the original two-edge UI.
-
-Build and run the geometry/UI checks from the project directory:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
-.\dist\ScreenShift.exe
-```
-
-The checks do not apply display configurations. Actual GPU acceptance and the
-confirmation/revert flow must be checked interactively on the target display.

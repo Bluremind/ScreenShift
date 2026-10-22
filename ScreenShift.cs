@@ -1,4 +1,4 @@
-﻿// Required Notice: Copyright (c) 2026 Bluremind (https://github.com/Bluremind/ScreenShift)
+// Required Notice: Copyright (c) 2026 Bluremind (https://github.com/Bluremind/ScreenShift)
 // Free for personal use under the ScreenShift Personal Use License (see LICENSE). Any other use needs a paid license (COMMERCIAL.md).
 //
 // ScreenShift: moves the Windows picture off the dead strips of a damaged panel.
@@ -269,16 +269,16 @@ namespace ScreenShift
                 : string.Format(L.T("вся картинка, сжата до {0:0.#}%", "fill, scaled to {0:0.#}%"), 100.0 * region.Width / w);
             string body = L.Russian
                 ? "Жёлтые линии — новые края картинки. Всё красное станет чёрным.\n" +
-                  "← →: левая; ↑ ↓: нижняя; Ctrl + ← →: правая; Ctrl + ↑ ↓: верхняя\n" +
-                  "Шаг: 4 px; Shift: 20 px; Alt: 1 px\n" +
+                  "← →  двигать левую линию      ↑ ↓  двигать нижнюю      Shift — быстрее\n" +
+                  "Ctrl + ← →  двигать правую линию      Ctrl + ↑ ↓  двигать верхнюю\n" +
                   "Подведите каждую линию вплотную к чёрной полосе, но так, чтобы её ещё было видно.\n" +
                   "Если клавиши не действуют — щёлкните по экрану.\n\n" +
                   string.Format("Слева: {0} px   Сверху: {1} px   Справа: {2} px   Снизу: {3} px\n", cutLeft, cutTop, cutRight, cutBottom) +
                   "Tab — режим: " + mode + "\n\n" +
                   "Enter — применить      R — убрать сдвиг      Esc — выйти"
                 : "Yellow lines are the new edges of the picture. Everything red will turn black.\n" +
-                  "← →: left edge; ↑ ↓: bottom edge; Ctrl + ← →: right edge; Ctrl + ↑ ↓: top edge\n" +
-                  "Step: 4 px; Shift: 20 px; Alt: 1 px\n" +
+                  "← →  move the left line      ↑ ↓  move the bottom line      Shift — faster\n" +
+                  "Ctrl + ← →  move the right line      Ctrl + ↑ ↓  move the top line\n" +
                   "Place each line right next to the dead strip, but keep the strip itself out of view.\n" +
                   "If the keys do nothing, click on the screen.\n\n" +
                   string.Format("Left: {0} px   Top: {1} px   Right: {2} px   Bottom: {3} px\n", cutLeft, cutTop, cutRight, cutBottom) +
@@ -302,7 +302,7 @@ namespace ScreenShift
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            int step = (keyData & Keys.Alt) != 0 ? 1 : (keyData & Keys.Shift) != 0 ? 20 : 4;
+            int step = (keyData & Keys.Shift) != 0 ? 20 : 4;
             int maxX = Math.Max(0, panel.Width - Math.Min(640, panel.Width));
             int maxY = Math.Max(0, panel.Height - Math.Min(360, panel.Height));
             bool opposite = (keyData & Keys.Control) != 0;

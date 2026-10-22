@@ -32,8 +32,8 @@ try {
     Press ([Windows.Forms.Keys]::Right)
     Press ([Windows.Forms.Keys]::Up)
     Press ([Windows.Forms.Keys]::Control -bor [Windows.Forms.Keys]::Left)
-    Press ([Windows.Forms.Keys]::Control -bor [Windows.Forms.Keys]::Down -bor [Windows.Forms.Keys]::Alt)
-    Assert ($overlay.CutLeft -eq 4 -and $overlay.CutBottom -eq 4 -and $overlay.CutRight -eq 4 -and $overlay.CutTop -eq 1) 'Four-edge keys incorrect'
+    Press ([Windows.Forms.Keys]::Control -bor [Windows.Forms.Keys]::Down -bor [Windows.Forms.Keys]::Shift)
+    Assert ($overlay.CutLeft -eq 4 -and $overlay.CutBottom -eq 4 -and $overlay.CutRight -eq 4 -and $overlay.CutTop -eq 20) 'Four-edge keys incorrect'
     $overlay.CutLeft = 1276
     Press ([Windows.Forms.Keys]::Control -bor [Windows.Forms.Keys]::Left)
     Assert ($overlay.CutLeft -eq 1276 -and $overlay.CutRight -eq 4) 'Moving right edge displaced left edge at limit'
