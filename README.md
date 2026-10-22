@@ -148,6 +148,39 @@ Public source availability does not grant unrestricted redistribution rights. Fo
 
 ---
 
+## 签名与校验 / Signing and verification
+
+本 fork 版本标识为 `1.1.1-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
+
+**本机测试签名（Hao）：**
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\self-sign.ps1 -Publisher Hao
+```
+
+测试文件位于 `dist\self-signed\ScreenShift.exe`。脚本在当前用户个人证书库中创建或复用一年有效的自签名代码签名证书，使用 SHA-256，私钥不可导出；不会安装受信任根证书。该版本没有可信时间戳，其他电脑默认不信任证书。Windows 可能显示 `UnknownError` / `NotTrusted` 和不受信任证书链提示。自签名不代表受信任发行版，不能消除 Gmail 的 EXE 附件限制。
+
+**受信任证书签名：** 先取得代码签名证书、配置其私钥/硬件令牌并安装 Windows SDK Signing Tools。使用证书提供商的 RFC 3161 时间戳地址：
+
+```powershell
+# Replace every placeholder with your actual certificate/tool/provider values.
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Sign -CertificateThumbprint "YOUR_40_HEX_THUMBPRINT" -SignToolPath "C:\path\to\signtool.exe" -TimestampUrl "https://YOUR_PROVIDER_TIMESTAMP_URL"
+```
+
+默认从 `CurrentUser\My` 选取证书；机器证书库使用 `-MachineStore`。脚本检查证书、执行 SHA-256 签名和时间戳、验证信任及签名者，成功后才写入校验文件。不要把私钥或密码提交到 Git。云签名服务需要对应服务配置，此脚本的证书库方式不自动配置云账号。
+
+**English:** The fork is identified as `1.1.1-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
+
+For trusted signing, obtain a code-signing certificate, configure private-key access and install the Windows SDK Signing Tools. Run `build.ps1 -Sign` using the certificate thumbprint, SignTool path and your provider's RFC 3161 timestamp URL as shown above. The script validates the selected certificate, signs with SHA-256, timestamps, verifies the result, then writes the checksum. Cloud-signing accounts require provider-specific setup. Neither self-signing nor trusted signing bypasses Gmail's executable-attachment policy or guarantees SmartScreen reputation. Distribution still requires the author's permission.
+
+Verify a file locally / 本地检查：
+
+```powershell
+Get-AuthenticodeSignature .\dist\self-signed\ScreenShift.exe | Format-List Status,StatusMessage,SignerCertificate
+Get-FileHash .\dist\self-signed\ScreenShift.exe -Algorithm SHA256
+```
+
 ## 上游项目介绍（保留原文） / Upstream introduction
 
 <div align="center">
