@@ -168,6 +168,11 @@ namespace ScreenShift
         // Cuts are measured inward from each physical panel edge.
         public static bool Plan(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, out Size desktop, out Rectangle region)
         {
+            return Plan(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, true, out desktop, out region);
+        }
+
+        public static bool Plan(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect, out Size desktop, out Rectangle region)
+        {
             desktop = Size.Empty;
             region = Rectangle.Empty;
             if (panel.Width <= 0 || panel.Height <= 0 || cutLeft < 0 || cutTop < 0 || cutRight < 0 || cutBottom < 0 ||
@@ -186,6 +191,12 @@ namespace ScreenShift
                 region = Rectangle.Empty;
                 return false;
             }
+            if (!keepAspect)
+            {
+                desktop = panel;
+                region = new Rectangle(cutLeft, cutTop, vw, vh);
+                return true;
+            }
             double s = Math.Min((double)vw / panel.Width, (double)vh / panel.Height);
             int rw = (int)Math.Round(panel.Width * s), rh = (int)Math.Round(panel.Height * s);
             if (rw < 1 || rh < 1) return false;
@@ -199,9 +210,14 @@ namespace ScreenShift
     {
         public int CutLeft, CutTop, CutRight, CutBottom;
         public bool Crisp;
+        readonly CheckBox aspectBox;
+        public bool KeepAspect { get { return aspectBox.Checked; } }
         readonly Size panel;
 
         public Overlay(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp)
+            : this(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, true) { }
+
+        public Overlay(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect)
         {
             this.panel = panel;
             CutLeft = cutLeft;
@@ -217,6 +233,15 @@ namespace ScreenShift
             TopMost = true;
             BackColor = Color.Black;
             DoubleBuffered = true;
+            aspectBox = new CheckBox {
+                Text = L.T("Сохранять пропорции (A; только Fill)", "Keep original aspect ratio (A; Fill only)"),
+                Checked = keepAspect, ForeColor = Color.White, BackColor = Color.FromArgb(24, 24, 24),
+                AutoSize = false, Font = new Font("Segoe UI", 16f, GraphicsUnit.Pixel), TabStop = true,
+                AccessibleName = "Keep original aspect ratio"
+            };
+            aspectBox.CheckedChanged += delegate { Invalidate(); };
+            Controls.Add(aspectBox);
+            PositionAspectBox();
         }
 
         protected override void OnShown(EventArgs e)
@@ -233,15 +258,20 @@ namespace ScreenShift
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            Render(e.Graphics, panel, CutLeft, CutTop, CutRight, CutBottom, Crisp);
+            Render(e.Graphics, panel, CutLeft, CutTop, CutRight, CutBottom, Crisp, KeepAspect);
         }
 
         public static void Render(Graphics g, Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp)
         {
+            Render(g, panel, cutLeft, cutTop, cutRight, cutBottom, crisp, true);
+        }
+
+        public static void Render(Graphics g, Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect)
+        {
             int w = panel.Width, h = panel.Height, lineY = h - cutBottom, lineX = w - cutRight;
             Size desktop;
             Rectangle region;
-            bool fits = Planner.Plan(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, out desktop, out region);
+            bool fits = Planner.Plan(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, out desktop, out region);
 
             g.Clear(Color.FromArgb(24, 24, 24));
             if (fits)
@@ -267,6 +297,8 @@ namespace ScreenShift
                     ? string.Format(L.T("чётко, без сжатия (рабочий стол {0}×{1})", "crisp, 1:1 (desktop {0}×{1})"), desktop.Width, desktop.Height)
                     : L.T("чётко — не помещается, уменьшите полосы", "crisp — does not fit, reduce the strips"))
                 : string.Format(L.T("вся картинка, сжата до {0:0.#}%", "fill, scaled to {0:0.#}%"), 100.0 * region.Width / w);
+            if (!crisp && !keepAspect)
+                mode = L.T("Fill: растянуть на всю область (искажение пропорций)", "fill: stretch to selected area (changes proportions)");
             string body = L.Russian
                 ? "Жёлтые линии — новые края картинки. Всё красное станет чёрным.\n" +
                   "← →: левая; ↑ ↓: нижняя; Ctrl + ← →: правая; Ctrl + ↑ ↓: верхняя\n" +
@@ -286,7 +318,7 @@ namespace ScreenShift
                   "Enter — apply      R — remove the shift      Esc — exit";
 
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-            var visible = new Rectangle(cutLeft + 8, cutTop + 8, lineX - cutLeft - 16, lineY - cutTop - 16);
+            var visible = new Rectangle(cutLeft + 8, cutTop + 8, lineX - cutLeft - 16, lineY - cutTop - 64);
             if (visible.Width <= 0 || visible.Height <= 0) return;
             using (var title = new Font("Segoe UI", h / 30f, FontStyle.Bold, GraphicsUnit.Pixel))
             using (var font = new Font("Segoe UI", h / 50f, GraphicsUnit.Pixel))
@@ -313,14 +345,24 @@ namespace ScreenShift
                 case Keys.Up: if (opposite) CutTop -= step; else CutBottom = Math.Min(maxY - CutTop, CutBottom + step); break;
                 case Keys.Down: if (opposite) CutTop = Math.Min(maxY - CutBottom, CutTop + step); else CutBottom -= step; break;
                 case Keys.Tab: Crisp = !Crisp; break;
+                case Keys.A: if (!Crisp) aspectBox.Checked = !aspectBox.Checked; break;
                 case Keys.Enter: DialogResult = DialogResult.OK; return true;
                 case Keys.R: DialogResult = DialogResult.Retry; return true;
                 case Keys.Escape: DialogResult = DialogResult.Cancel; return true;
                 default: return base.ProcessCmdKey(ref msg, keyData);
             }
             ClampCuts();
+            PositionAspectBox();
             Invalidate();
             return true;
+        }
+
+        void PositionAspectBox()
+        {
+            aspectBox.Enabled = !Crisp;
+            int width = Math.Min(480, Math.Max(1, panel.Width - CutLeft - CutRight - 32));
+            aspectBox.SetBounds(CutLeft + (panel.Width - CutLeft - CutRight - width) / 2,
+                panel.Height - CutBottom - 48, width, 32);
         }
 
         void ClampCuts()
@@ -419,8 +461,8 @@ namespace ScreenShift
         {
             DisplayConfig current = DisplayConfig.Query();
             int cutLeft = 0, cutTop = 0, cutRight = 0, cutBottom = 0;
-            bool crisp = false;
-            bool saved = Load(ref cutLeft, ref cutTop, ref cutRight, ref cutBottom, ref crisp);
+            bool crisp = false, keepAspect = true;
+            bool saved = Load(ref cutLeft, ref cutTop, ref cutRight, ref cutBottom, ref crisp, ref keepAspect);
 
             if (command == "--reset")
             {
@@ -432,7 +474,7 @@ namespace ScreenShift
                 if (!saved) return 0;
                 Size desktop;
                 Rectangle region;
-                if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, out desktop, out region)) return 1;
+                if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, out desktop, out region)) return 1;
                 if (current.Desktop == desktop && current.Region == region) return 0;
                 DisplayConfig.Check(current.With(desktop, region).Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
                     L.T("Не удалось применить сдвиг", "Could not apply the shift"));
@@ -446,7 +488,7 @@ namespace ScreenShift
                     L.T("Не удалось временно убрать сдвиг", "Could not temporarily remove the shift"));
 
             DialogResult result;
-            using (var overlay = new Overlay(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp))
+            using (var overlay = new Overlay(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect))
             {
                 result = overlay.ShowDialog();
                 cutLeft = overlay.CutLeft;
@@ -454,6 +496,7 @@ namespace ScreenShift
                 cutRight = overlay.CutRight;
                 cutBottom = overlay.CutBottom;
                 crisp = overlay.Crisp;
+                keepAspect = overlay.KeepAspect;
             }
 
             if (result == DialogResult.Retry)
@@ -470,7 +513,7 @@ namespace ScreenShift
 
             Size newDesktop;
             Rectangle newRegion;
-            if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, out newDesktop, out newRegion))
+            if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, out newDesktop, out newRegion))
             {
                 if (wasShifted) Restore(current);
                 MessageBox.Show(L.T(
@@ -496,7 +539,7 @@ namespace ScreenShift
             {
                 DisplayConfig.Check(next.Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
                     L.T("Не удалось сохранить сдвиг", "Could not save the shift"));
-                Save(cutLeft, cutTop, cutRight, cutBottom, crisp);
+                Save(cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect);
             }
             else
             {
@@ -517,7 +560,7 @@ namespace ScreenShift
             if (File.Exists(SettingsFile)) File.Delete(SettingsFile);
         }
 
-        static bool Load(ref int cutLeft, ref int cutTop, ref int cutRight, ref int cutBottom, ref bool crisp)
+        static bool Load(ref int cutLeft, ref int cutTop, ref int cutRight, ref int cutBottom, ref bool crisp, ref bool keepAspect)
         {
             if (!File.Exists(SettingsFile)) return false;
             string[] parts = File.ReadAllText(SettingsFile).Split(new[] { ' ', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
@@ -529,7 +572,7 @@ namespace ScreenShift
                 if (!int.TryParse(parts[0], out l) || !int.TryParse(parts[1], out b)) return false;
                 mode = parts[2];
             }
-            else if (parts.Length == 5)
+            else if (parts.Length == 5 || parts.Length == 6)
             {
                 if (!int.TryParse(parts[0], out l) || !int.TryParse(parts[1], out t) ||
                     !int.TryParse(parts[2], out r) || !int.TryParse(parts[3], out b)) return false;
@@ -537,6 +580,8 @@ namespace ScreenShift
             }
             else return false;
             if (l < 0 || t < 0 || r < 0 || b < 0 || (mode != "crisp" && mode != "fill")) return false;
+            if (parts.Length == 6 && parts[5] != "aspect" && parts[5] != "stretch") return false;
+            keepAspect = parts.Length != 6 || parts[5] == "aspect";
             cutLeft = l;
             cutTop = t;
             cutRight = r;
@@ -545,10 +590,10 @@ namespace ScreenShift
             return true;
         }
 
-        static void Save(int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp)
+        static void Save(int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile));
-            File.WriteAllText(SettingsFile, cutLeft + " " + cutTop + " " + cutRight + " " + cutBottom + " " + (crisp ? "crisp" : "fill"));
+            File.WriteAllText(SettingsFile, cutLeft + " " + cutTop + " " + cutRight + " " + cutBottom + " " + (crisp ? "crisp" : "fill") + " " + (keepAspect ? "aspect" : "stretch"));
         }
     }
 }

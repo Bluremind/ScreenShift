@@ -43,3 +43,51 @@ try {
     finally { $graphics.Dispose(); $bitmap.Dispose() }
 } finally { $overlay.Dispose() }
 'PASS: four-edge geometry, invalid cuts, crisp placement, keyboard controls, edge limits and preview rendering. No display settings changed.'
+
+# Stretch must use the exact selected rectangle, even with a different aspect ratio.
+Assert ([ScreenShift.Planner]::Plan($panel,100,50,200,150,$false,$false,[ref]$desktop,[ref]$region)) 'Stretch failed'
+Assert ($region -eq (New-Object Drawing.Rectangle(100,50,1620,880))) 'Stretch did not fill selected rectangle'
+Assert ($desktop -eq $panel) 'Stretch must retain the full desktop'
+Assert ([ScreenShift.Planner]::Plan($panel,100,50,200,150,$true,$false,[ref]$desktop,[ref]$region)) 'Crisp with saved stretch failed'
+Assert ($desktop.Width -eq 1280 -and $region.Width -eq 1280) 'Crisp must remain 1:1'
+$overlay = New-Object ScreenShift.Overlay($panel,100,50,200,150,$false,$true)
+try {
+    $box = $overlay.Controls[0]
+    Assert ($box.Checked -and $box.Enabled) 'Aspect checkbox default incorrect'
+    $box.Checked = $false
+    Assert (-not $overlay.KeepAspect) 'Mouse checkbox state not reflected'
+    Press ([Windows.Forms.Keys]::A)
+    Assert ($overlay.KeepAspect) 'A shortcut failed'
+    Press ([Windows.Forms.Keys]::Tab)
+    Assert (-not $box.Enabled) 'Crisp must disable aspect option'
+    Press ([Windows.Forms.Keys]::A)
+    Assert ($overlay.KeepAspect) 'Disabled aspect changed in Crisp'
+    Press ([Windows.Forms.Keys]::Tab)
+    Assert ($box.Enabled -and $box.Checked) 'Fill did not restore aspect preference'
+    Assert ($box.Left -ge 100 -and $box.Right -le 1720 -and $box.Top -ge 50 -and $box.Bottom -le 930) 'Checkbox outside selected area'
+} finally { $overlay.Dispose() }
+# Redirect persistence only for this test process; do not touch the user's settings.
+$settingsField = [ScreenShift.Program].GetField('SettingsFile',$flags)
+$originalPath = $settingsField.GetValue($null)
+$tempPath = Join-Path ([IO.Path]::GetTempPath()) ('screenshift-' + [Guid]::NewGuid().ToString() + '.txt')
+$save = [ScreenShift.Program].GetMethod('Save',$flags)
+$load = [ScreenShift.Program].GetMethod('Load',$flags)
+try {
+    $settingsField.SetValue($null,$tempPath)
+    [void]$save.Invoke($null,@(100,50,200,150,$false,$false))
+    $parameters = @(0,0,0,0,$true,$true)
+    Assert ($load.Invoke($null,$parameters)) 'Six-value settings failed'
+    Assert ($parameters[0] -eq 100 -and $parameters[1] -eq 50 -and -not $parameters[4] -and -not $parameters[5]) 'Stretch preference not saved'
+    foreach ($legacy in @('100 150 fill','100 50 200 150 fill')) {
+        [IO.File]::WriteAllText($tempPath,$legacy)
+        $parameters = @(0,0,0,0,$false,$false)
+        Assert ($load.Invoke($null,$parameters)) 'Legacy settings failed'
+        Assert ($parameters[5]) 'Legacy settings must preserve aspect ratio'
+    }
+    [IO.File]::WriteAllText($tempPath,'100 50 200 150 fill invalid')
+    Assert (-not $load.Invoke($null,@(0,0,0,0,$false,$true))) 'Invalid aspect preference accepted'
+} finally {
+    $settingsField.SetValue($null,$originalPath)
+    if (Test-Path -LiteralPath $tempPath) { Remove-Item -LiteralPath $tempPath }
+}
+'PASS: stretch geometry, aspect checkbox, mode transitions and backward-compatible settings.'

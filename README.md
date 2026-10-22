@@ -14,6 +14,14 @@
 
 > 本版本的程序界面仍为英文／俄文。下方保留的原项目介绍、截图和官方下载链接描述的是上游版本；上游 EXE 不包含本 fork 的四边修改。本 fork 目前没有发布修改版 EXE。
 
+## v1.2.0：可选保持比例 / Optional aspect ratio
+
+校准界面底部新增 **Keep original aspect ratio** 复选框，默认勾选。Fill 模式下取消勾选可铺满四边选定的区域；按 **A** 也可切换。选项随设置保存。Crisp 保持 1:1 显示，此选项在 Crisp 下禁用，切回 Fill 后恢复之前选择。
+
+例如 1920×1080 屏幕裁掉左 100、上 50、右 200、下 150 后，取消保持比例会将整个桌面拉伸到 `(100, 50)` 起始的 **1620×880** 区域。它增加的是实际利用的屏幕面积，不会增加桌面分辨率，文字、圆形和图片可能变形。Enter 应用后的 20 秒确认／恢复机制仍然保留；实际效果取决于显卡驱动。
+
+The calibration overlay now has a **Keep original aspect ratio** checkbox, enabled by default. In Fill mode, uncheck it (or press **A**) to stretch the entire desktop into the selected rectangle. The preference is saved. Crisp remains pixel-for-pixel and disables the checkbox; switching back to Fill restores the saved preference. Stretch uses more of the physical panel but does not increase desktop resolution and may distort text and images. The 20-second apply confirmation/revert remains in place; actual driver acceptance requires hardware testing.
+
 ## 本版本的改动
 
 - 四边裁切计算、四条边界预览、四边像素数显示及配置保存。
@@ -37,7 +45,7 @@
 | R | 移除裁切并删除保存配置 |
 | Esc | 取消校准 |
 
-边界按箭头方向移动。Crisp 在可用区域内居中放置能容纳的最大标准分辨率，按 1:1 显示；Fill 保持原屏幕比例缩放，可能仍有额外黑边。仅支持矩形区域和一个活动显示器，实际可用性取决于显卡驱动。
+边界按箭头方向移动。Crisp 在可用区域内居中放置能容纳的最大标准分辨率，按 1:1 显示；Fill 默认保持原屏幕比例缩放；取消勾选 Keep original aspect ratio 可拉伸铺满所选区域，但画面比例会改变。仅支持矩形区域和一个活动显示器，实际可用性取决于显卡驱动。
 
 ## 从源码编译
 
@@ -60,7 +68,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
 
 文件位置：`%LOCALAPPDATA%\ScreenShift\settings.txt`。
 
-新格式为 `左 上 右 下 模式`，例如 `100 50 200 150 fill`。旧格式 `左 下 模式` 仍然兼容。初次运行默认四边均为 0。
+新格式为 `左 上 右 下 模式 比例选项`，例如 `100 50 200 150 fill stretch`。`aspect` 保持比例，`stretch` 拉伸铺满。旧的三项或五项格式仍兼容，默认保持比例。初次运行默认四边均为 0。
 
 - `ScreenShift.exe --apply`：直接应用已保存配置，不显示确认窗口。
 - `ScreenShift.exe --reset`：恢复完整屏幕并删除配置。
@@ -107,7 +115,7 @@ The application UI remains English/Russian. The upstream introduction, screensho
 | R | Remove the shift and delete saved settings |
 | Esc | Cancel calibration |
 
-Boundaries move in the direction of the arrow. Crisp centers the largest fitting standard resolution with the panel's aspect ratio at 1:1 pixel size. Fill scales proportionally, so additional black margins may remain. Only rectangular regions and one active display are supported; actual compatibility depends on the GPU driver.
+Boundaries move in the direction of the arrow. Crisp centers the largest fitting standard resolution with the panel's aspect ratio at 1:1 pixel size. Fill preserves proportions by default. Uncheck Keep original aspect ratio to stretch the desktop across the entire selected rectangle; this may distort text and images. Only rectangular regions and one active display are supported; actual compatibility depends on the GPU driver.
 
 ### Build and verify
 
@@ -130,7 +138,7 @@ These checks do not change display settings. Actual GPU acceptance and interacti
 
 Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt`.
 
-The new format is `left top right bottom mode`, for example `100 50 200 150 fill`. The original `left bottom mode` format is still accepted. New configurations start with all four cuts at zero.
+The new format is `left top right bottom mode aspect-option`, for example `100 50 200 150 fill stretch`. Use `aspect` to preserve proportions or `stretch` to fill the selected rectangle. Legacy three- and five-value settings are accepted and default to preserving proportions. New configurations start with all four cuts at zero.
 
 - `ScreenShift.exe --apply`: apply the saved settings directly without a confirmation dialog.
 - `ScreenShift.exe --reset`: restore the full screen and delete saved settings.
@@ -150,7 +158,7 @@ Public source availability does not grant unrestricted redistribution rights. Fo
 
 ## 签名与校验 / Signing and verification
 
-本 fork 版本标识为 `1.1.1-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
+本 fork 版本标识为 `1.2.0-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
 
 **本机测试签名（Hao）：**
 
@@ -170,7 +178,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Sign -Certifica
 
 默认从 `CurrentUser\My` 选取证书；机器证书库使用 `-MachineStore`。脚本检查证书、执行 SHA-256 签名和时间戳、验证信任及签名者，成功后才写入校验文件。不要把私钥或密码提交到 Git。云签名服务需要对应服务配置，此脚本的证书库方式不自动配置云账号。
 
-**English:** The fork is identified as `1.1.1-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
+**English:** The fork is identified as `1.2.0-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
 
 For trusted signing, obtain a code-signing certificate, configure private-key access and install the Windows SDK Signing Tools. Run `build.ps1 -Sign` using the certificate thumbprint, SignTool path and your provider's RFC 3161 timestamp URL as shown above. The script validates the selected certificate, signs with SHA-256, timestamps, verifies the result, then writes the checksum. Cloud-signing accounts require provider-specific setup. Neither self-signing nor trusted signing bypasses Gmail's executable-attachment policy or guarantees SmartScreen reputation. Distribution still requires the author's permission.
 
@@ -340,7 +348,7 @@ If ScreenShift saved your laptop, a ⭐ helps other people find it.
 ## Four-edge calibration (local modification)
 
 All four edges can be adjusted independently. The usable area is rectangular;
-Fill preserves the panel aspect ratio and may leave additional black margins.
+Fill preserves the panel aspect ratio by default; uncheck Keep original aspect ratio to stretch across the entire selected rectangle.
 Crisp centers the largest fitting standard resolution inside the selected area.
 
 | Keys | Action |
