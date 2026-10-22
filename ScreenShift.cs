@@ -176,7 +176,7 @@ namespace ScreenShift
         }
         public static List<Size> CompatibleCandidates(Size desired, Rectangle area, IEnumerable<Size> modes)
         {
-            var list = new List<Size>(modes);
+            var list = NearestAspectModes(area.Size, modes);
             double aspect = (double)area.Width / area.Height;
             list.Sort(delegate(Size a, Size b) {
                 double sa = Math.Abs(Math.Log(((double)a.Width / a.Height) / aspect)) * 10 + Math.Abs(Math.Log((double)a.Width / desired.Width));
@@ -184,6 +184,23 @@ namespace ScreenShift
                 return sa.CompareTo(sb);
             });
             return list;
+        }
+        public static List<Size> NearestAspectModes(Size area, IEnumerable<Size> modes)
+        {
+            var result = new List<Size>();
+            if (area.Width <= 0 || area.Height <= 0) return result;
+            double ratio = (double)area.Width / area.Height, best = double.MaxValue;
+            foreach (Size mode in modes)
+            {
+                if (mode.Width <= 0 || mode.Height <= 0) continue;
+                best = Math.Min(best, Math.Abs(Math.Log(((double)mode.Width / mode.Height) / ratio)));
+            }
+            // 0.2% tolerance groups integer-rounded variants such as 1366x768 with 16:9.
+            foreach (Size mode in modes)
+                if (mode.Width > 0 && mode.Height > 0 &&
+                    Math.Abs(Math.Log(((double)mode.Width / mode.Height) / ratio)) <= best + 0.002 && !result.Contains(mode))
+                    result.Add(mode);
+            return result;
         }
 
         // Standard modes with the panel's aspect ratio, largest first; these can be shown 1:1 without blur.
@@ -489,10 +506,10 @@ namespace ScreenShift
                 resolutionList.Items.Clear();
                 var widths = new List<int> { 0, 960, 1280, 1366, 1600, 1920, 2560, 3840 };
                 var ultrawide = Planner.UltrawideModes();
-                foreach (Size preset in ultrawide) widths.Add(Planner.DriverKey(preset));
-                foreach (Size driver in Planner.DriverModes())
-                    if (!widths.Contains(Planner.DriverKey(driver))) widths.Add(Planner.DriverKey(driver));
-                if (resolutionWidth > 0 && !widths.Contains(resolutionWidth)) widths.Add(resolutionWidth);
+                var fixedModes = new List<Size>(ultrawide);
+                fixedModes.AddRange(Planner.DriverModes());
+                foreach (Size mode in Planner.NearestAspectModes(area, fixedModes)) widths.Add(Planner.DriverKey(mode));
+                if (resolutionWidth > 0 && resolutionWidth <= 8192 && !widths.Contains(resolutionWidth)) widths.Add(resolutionWidth);
                 int selected = 0;
                 foreach (int w in widths)
                 {
