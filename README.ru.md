@@ -4,13 +4,13 @@
 
 **Часть экрана ноутбука не работает? Верните весь рабочий стол Windows на ту часть, что ещё показывает.**
 
-Маленькая утилита, бесплатная для личного использования. Она сдвигает и вписывает *весь* рабочий стол (обои, значки, кнопку «Пуск», панель задач) в рабочую область повреждённой матрицы. Без драйверов, без установщика, один файл на 22 КБ, интерфейс на русском и английском.
+Маленькая утилита, бесплатная для личного использования. Она сдвигает и вписывает *весь* рабочий стол (обои, значки, кнопку «Пуск», панель задач) в рабочую область повреждённой матрицы. Без драйверов, без установщика, один файл на 24 КБ, интерфейс на русском и английском.
 
 [![Релиз](https://img.shields.io/github/v/release/Bluremind/ScreenShift?style=flat-square&color=2ea043)](https://github.com/Bluremind/ScreenShift/releases/latest)
 [![Лицензия: бесплатно для личного использования](https://img.shields.io/badge/лицензия-бесплатно%20для%20личного%20использования-orange?style=flat-square)](LICENSE)
 [![Коммерческая лицензия](https://img.shields.io/badge/остальное%20использование-платная%20лицензия-blueviolet?style=flat-square)](COMMERCIAL.md)
 ![Windows 10+](https://img.shields.io/badge/Windows-10%20%2B-0078d4?style=flat-square)
-![Размер](https://img.shields.io/badge/размер-22%20КБ-8957e5?style=flat-square)
+![Размер](https://img.shields.io/badge/размер-24%20КБ-8957e5?style=flat-square)
 ![Без телеметрии](https://img.shields.io/badge/телеметрия-нет-lightgrey?style=flat-square)
 
 [**Скачать**](https://github.com/Bluremind/ScreenShift/releases/latest) · [English](README.md) · [Как это работает](#как-это-работает) · [Вопросы и ответы](#вопросы-и-ответы)

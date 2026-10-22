@@ -4,13 +4,13 @@
 
 **Your laptop screen is partly dead? Put the whole Windows desktop back on the part that still works.**
 
-A tiny tool, free for personal use, that moves and fits the *entire* desktop (wallpaper, icons, Start button, taskbar) into the working area of a damaged panel. No drivers. No installer. One 22 KB file, in English and Russian.
+A tiny tool, free for personal use, that moves and fits the *entire* desktop (wallpaper, icons, Start button, taskbar) into the working area of a damaged panel. No drivers. No installer. One 24 KB file, in English and Russian.
 
 [![Release](https://img.shields.io/github/v/release/Bluremind/ScreenShift?style=flat-square&color=2ea043)](https://github.com/Bluremind/ScreenShift/releases/latest)
 [![License: free for personal use](https://img.shields.io/badge/license-free%20for%20personal%20use-orange?style=flat-square)](LICENSE)
 [![Commercial license](https://img.shields.io/badge/all%20other%20use-paid%20license-blueviolet?style=flat-square)](COMMERCIAL.md)
 ![Windows 10+](https://img.shields.io/badge/Windows-10%20%2B-0078d4?style=flat-square)
-![Size](https://img.shields.io/badge/size-22%20KB-8957e5?style=flat-square)
+![Size](https://img.shields.io/badge/size-24%20KB-8957e5?style=flat-square)
 ![No telemetry](https://img.shields.io/badge/telemetry-none-lightgrey?style=flat-square)
 
 [**Download**](https://github.com/Bluremind/ScreenShift/releases/latest) · [Русский](README.ru.md) · [How it works](#how-it-works) · [FAQ](#faq)
