@@ -173,11 +173,32 @@ namespace ScreenShift
 
         public static bool Plan(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect, out Size desktop, out Rectangle region)
         {
+            return Plan(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, false, 0, out desktop, out region);
+        }
+
+        // Integer pixel dimensions approximate the selected aspect ratio to the nearest pixel.
+        public static Size AreaResolution(Size area, int width)
+        {
+            if (area.Width <= 0 || area.Height <= 0 || width < 0 || width > 8192) return Size.Empty;
+            if (width == 0) return area;
+            int height = (int)Math.Round((double)width * area.Height / area.Width);
+            return height < 1 || height > 8192 ? Size.Empty : new Size(width, height);
+        }
+
+        public static bool Plan(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect, bool matchArea, int resolutionWidth, out Size desktop, out Rectangle region)
+        {
             desktop = Size.Empty;
             region = Rectangle.Empty;
             if (panel.Width <= 0 || panel.Height <= 0 || cutLeft < 0 || cutTop < 0 || cutRight < 0 || cutBottom < 0 ||
                 (long)cutLeft + cutRight >= panel.Width || (long)cutTop + cutBottom >= panel.Height) return false;
             int vw = panel.Width - cutLeft - cutRight, vh = panel.Height - cutTop - cutBottom;
+            if (matchArea)
+            {
+                desktop = AreaResolution(new Size(vw, vh), resolutionWidth);
+                if (desktop.IsEmpty) return false;
+                region = new Rectangle(cutLeft, cutTop, vw, vh);
+                return true;
+            }
             if (crisp)
             {
                 foreach (Size m in CrispModes(panel))
@@ -211,6 +232,12 @@ namespace ScreenShift
         public int CutLeft, CutTop, CutRight, CutBottom;
         public bool Crisp;
         readonly CheckBox aspectBox;
+        readonly CheckBox resolutionBox;
+        readonly ComboBox resolutionList;
+        bool updatingResolutions;
+        int resolutionWidth;
+        public bool MatchArea { get { return resolutionBox.Checked; } }
+        public int ResolutionWidth { get { return resolutionWidth; } }
         public bool KeepAspect { get { return aspectBox.Checked; } }
         readonly Size panel;
 
@@ -218,6 +245,9 @@ namespace ScreenShift
             : this(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, true) { }
 
         public Overlay(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect)
+            : this(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, false, 0) { }
+
+        public Overlay(Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect, bool matchArea, int resolutionWidth)
         {
             this.panel = panel;
             CutLeft = cutLeft;
@@ -241,6 +271,26 @@ namespace ScreenShift
             };
             aspectBox.CheckedChanged += delegate { Invalidate(); };
             Controls.Add(aspectBox);
+            this.resolutionWidth = resolutionWidth;
+            resolutionBox = new CheckBox {
+                Text = L.T("Разрешение по области (D)", "Match desktop to selected area (D)"),
+                Checked = matchArea, ForeColor = Color.White, BackColor = Color.FromArgb(24, 24, 24),
+                Font = new Font("Segoe UI", 14f, GraphicsUnit.Pixel),
+                AccessibleName = "Match desktop resolution to selected area"
+            };
+            resolutionList = new ComboBox {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 14f, GraphicsUnit.Pixel),
+                AccessibleName = "Desktop resolution"
+            };
+            resolutionBox.CheckedChanged += delegate { PositionAspectBox(); Invalidate(); };
+            resolutionList.SelectedIndexChanged += delegate {
+                if (updatingResolutions || resolutionList.SelectedItem == null) return;
+                this.resolutionWidth = ((ResolutionChoice)resolutionList.SelectedItem).Width;
+                Invalidate();
+            };
+            Controls.Add(resolutionBox);
+            Controls.Add(resolutionList);
             PositionAspectBox();
         }
 
@@ -253,12 +303,13 @@ namespace ScreenShift
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
+            ActiveControl = null;
             Activate();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            Render(e.Graphics, panel, CutLeft, CutTop, CutRight, CutBottom, Crisp, KeepAspect);
+            Render(e.Graphics, panel, CutLeft, CutTop, CutRight, CutBottom, Crisp, KeepAspect, MatchArea, ResolutionWidth);
         }
 
         public static void Render(Graphics g, Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp)
@@ -268,10 +319,15 @@ namespace ScreenShift
 
         public static void Render(Graphics g, Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect)
         {
+            Render(g, panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, false, 0);
+        }
+
+        public static void Render(Graphics g, Size panel, int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect, bool matchArea, int resolutionWidth)
+        {
             int w = panel.Width, h = panel.Height, lineY = h - cutBottom, lineX = w - cutRight;
             Size desktop;
             Rectangle region;
-            bool fits = Planner.Plan(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, out desktop, out region);
+            bool fits = Planner.Plan(panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, matchArea, resolutionWidth, out desktop, out region);
 
             g.Clear(Color.FromArgb(24, 24, 24));
             if (fits)
@@ -299,6 +355,9 @@ namespace ScreenShift
                 : string.Format(L.T("вся картинка, сжата до {0:0.#}%", "fill, scaled to {0:0.#}%"), 100.0 * region.Width / w);
             if (!crisp && !keepAspect)
                 mode = L.T("Fill: растянуть на всю область (искажение пропорций)", "fill: stretch to selected area (changes proportions)");
+            if (matchArea)
+                mode = fits ? string.Format(L.T("по области: рабочий стол {0}×{1} (F6: выбор)", "match area: desktop {0}×{1} (F6: choose)"), desktop.Width, desktop.Height)
+                    : L.T("недопустимое разрешение", "invalid desktop resolution");
             string body = L.Russian
                 ? "Жёлтые линии — новые края картинки. Всё красное станет чёрным.\n" +
                   "← →: левая; ↑ ↓: нижняя; Ctrl + ← →: правая; Ctrl + ↑ ↓: верхняя\n" +
@@ -318,10 +377,10 @@ namespace ScreenShift
                   "Enter — apply      R — remove the shift      Esc — exit";
 
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-            var visible = new Rectangle(cutLeft + 8, cutTop + 8, lineX - cutLeft - 16, lineY - cutTop - 64);
+            var visible = new Rectangle(cutLeft + 8, cutTop + 8, lineX - cutLeft - 16, lineY - cutTop - 112);
             if (visible.Width <= 0 || visible.Height <= 0) return;
-            using (var title = new Font("Segoe UI", h / 30f, FontStyle.Bold, GraphicsUnit.Pixel))
-            using (var font = new Font("Segoe UI", h / 50f, GraphicsUnit.Pixel))
+            using (var title = new Font("Segoe UI", Math.Max(12f, Math.Min(h / 30f, visible.Height / 10f)), FontStyle.Bold, GraphicsUnit.Pixel))
+            using (var font = new Font("Segoe UI", Math.Max(8f, Math.Min(h / 50f, Math.Min(visible.Height / 18f, visible.Width / 85f))), GraphicsUnit.Pixel))
             using (var fmt = new StringFormat { Alignment = StringAlignment.Center })
             {
                 SizeF ts = g.MeasureString(L.Caption, title, visible.Width, fmt);
@@ -334,6 +393,12 @@ namespace ScreenShift
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            Keys code = keyData & Keys.KeyCode;
+            // Let the focused dropdown navigate resolutions without moving calibration edges.
+            if (resolutionList.Focused && (code == Keys.Up || code == Keys.Down || code == Keys.Left || code == Keys.Right ||
+                code == Keys.Home || code == Keys.End || code == Keys.PageUp || code == Keys.PageDown || code == Keys.F4 ||
+                (resolutionList.DroppedDown && (code == Keys.Enter || code == Keys.Escape))))
+                return base.ProcessCmdKey(ref msg, keyData);
             int step = (keyData & Keys.Alt) != 0 ? 1 : (keyData & Keys.Shift) != 0 ? 20 : 4;
             int maxX = Math.Max(0, panel.Width - Math.Min(640, panel.Width));
             int maxY = Math.Max(0, panel.Height - Math.Min(360, panel.Height));
@@ -344,8 +409,10 @@ namespace ScreenShift
                 case Keys.Right: if (opposite) CutRight -= step; else CutLeft = Math.Min(maxX - CutRight, CutLeft + step); break;
                 case Keys.Up: if (opposite) CutTop -= step; else CutBottom = Math.Min(maxY - CutTop, CutBottom + step); break;
                 case Keys.Down: if (opposite) CutTop = Math.Min(maxY - CutBottom, CutTop + step); else CutBottom -= step; break;
-                case Keys.Tab: Crisp = !Crisp; break;
-                case Keys.A: if (!Crisp) aspectBox.Checked = !aspectBox.Checked; break;
+                case Keys.Tab: if (!MatchArea) Crisp = !Crisp; break;
+                case Keys.A: if (!Crisp && !MatchArea) aspectBox.Checked = !aspectBox.Checked; break;
+                case Keys.D: resolutionBox.Checked = !resolutionBox.Checked; break;
+                case Keys.F6: if (MatchArea) { resolutionList.Focus(); resolutionList.DroppedDown = true; } return true;
                 case Keys.Enter: DialogResult = DialogResult.OK; return true;
                 case Keys.R: DialogResult = DialogResult.Retry; return true;
                 case Keys.Escape: DialogResult = DialogResult.Cancel; return true;
@@ -359,10 +426,50 @@ namespace ScreenShift
 
         void PositionAspectBox()
         {
-            aspectBox.Enabled = !Crisp;
+            aspectBox.Enabled = !Crisp && !MatchArea;
             int width = Math.Min(480, Math.Max(1, panel.Width - CutLeft - CutRight - 32));
             aspectBox.SetBounds(CutLeft + (panel.Width - CutLeft - CutRight - width) / 2,
-                panel.Height - CutBottom - 48, width, 32);
+                panel.Height - CutBottom - 96, width, 32);
+            int rowWidth = Math.Min(600, panel.Width - CutLeft - CutRight - 32);
+            int left = CutLeft + (panel.Width - CutLeft - CutRight - rowWidth) / 2;
+            int listWidth = Math.Min(240, rowWidth / 2);
+            resolutionBox.SetBounds(left, panel.Height - CutBottom - 56, rowWidth - listWidth, 32);
+            resolutionList.SetBounds(left + rowWidth - listWidth, panel.Height - CutBottom - 52, listWidth, 32);
+            resolutionList.Enabled = MatchArea;
+            UpdateResolutions();
+        }
+
+        sealed class ResolutionChoice
+        {
+            public int Width;
+            public string Label;
+            public override string ToString() { return Label; }
+        }
+
+        void UpdateResolutions()
+        {
+            Size area = new Size(panel.Width - CutLeft - CutRight, panel.Height - CutTop - CutBottom);
+            updatingResolutions = true;
+            resolutionList.BeginUpdate();
+            try
+            {
+                resolutionList.Items.Clear();
+                var widths = new List<int> { 0, 960, 1280, 1366, 1600, 1920, 2560, 3840 };
+                if (resolutionWidth > 0 && !widths.Contains(resolutionWidth)) widths.Add(resolutionWidth);
+                int selected = 0;
+                foreach (int w in widths)
+                {
+                    Size s = Planner.AreaResolution(area, w);
+                    if (s.IsEmpty) continue;
+                    var choice = new ResolutionChoice { Width = w, Label = s.Width + " × " + s.Height +
+                        (w == 0 ? L.T(" (1:1, авто)", " (1:1, auto)") : "") };
+                    int index = resolutionList.Items.Add(choice);
+                    if (w == resolutionWidth) selected = index;
+                }
+                resolutionList.SelectedIndex = selected;
+                resolutionWidth = ((ResolutionChoice)resolutionList.SelectedItem).Width;
+            }
+            finally { resolutionList.EndUpdate(); updatingResolutions = false; }
         }
 
         void ClampCuts()
@@ -461,8 +568,9 @@ namespace ScreenShift
         {
             DisplayConfig current = DisplayConfig.Query();
             int cutLeft = 0, cutTop = 0, cutRight = 0, cutBottom = 0;
-            bool crisp = false, keepAspect = true;
-            bool saved = Load(ref cutLeft, ref cutTop, ref cutRight, ref cutBottom, ref crisp, ref keepAspect);
+            bool crisp = false, keepAspect = true, matchArea = false;
+            int resolutionWidth = 0;
+            bool saved = Load(ref cutLeft, ref cutTop, ref cutRight, ref cutBottom, ref crisp, ref keepAspect, ref matchArea, ref resolutionWidth);
 
             if (command == "--reset")
             {
@@ -474,7 +582,7 @@ namespace ScreenShift
                 if (!saved) return 0;
                 Size desktop;
                 Rectangle region;
-                if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, out desktop, out region)) return 1;
+                if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, matchArea, resolutionWidth, out desktop, out region)) return 1;
                 if (current.Desktop == desktop && current.Region == region) return 0;
                 DisplayConfig.Check(current.With(desktop, region).Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
                     L.T("Не удалось применить сдвиг", "Could not apply the shift"));
@@ -488,7 +596,7 @@ namespace ScreenShift
                     L.T("Не удалось временно убрать сдвиг", "Could not temporarily remove the shift"));
 
             DialogResult result;
-            using (var overlay = new Overlay(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect))
+            using (var overlay = new Overlay(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, matchArea, resolutionWidth))
             {
                 result = overlay.ShowDialog();
                 cutLeft = overlay.CutLeft;
@@ -497,6 +605,8 @@ namespace ScreenShift
                 cutBottom = overlay.CutBottom;
                 crisp = overlay.Crisp;
                 keepAspect = overlay.KeepAspect;
+                matchArea = overlay.MatchArea;
+                resolutionWidth = overlay.ResolutionWidth;
             }
 
             if (result == DialogResult.Retry)
@@ -513,12 +623,12 @@ namespace ScreenShift
 
             Size newDesktop;
             Rectangle newRegion;
-            if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, out newDesktop, out newRegion))
+            if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, matchArea, resolutionWidth, out newDesktop, out newRegion))
             {
                 if (wasShifted) Restore(current);
                 MessageBox.Show(L.T(
-                    "В режиме «чётко» картинка не помещается. Выберите Tab режим «вся картинка».",
-                    "The picture does not fit in crisp mode. Press Tab to switch to fill mode."), Caption);
+                    "Разрешение не подходит. Уменьшите полосы, выберите другое разрешение или режим Fill.",
+                    "The selected desktop resolution does not fit. Reduce the cuts, choose another resolution, or switch to Fill."), Caption);
                 return 1;
             }
             DisplayConfig next = current.With(newDesktop, newRegion);
@@ -539,7 +649,7 @@ namespace ScreenShift
             {
                 DisplayConfig.Check(next.Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
                     L.T("Не удалось сохранить сдвиг", "Could not save the shift"));
-                Save(cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect);
+                Save(cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, matchArea, resolutionWidth);
             }
             else
             {
@@ -560,7 +670,7 @@ namespace ScreenShift
             if (File.Exists(SettingsFile)) File.Delete(SettingsFile);
         }
 
-        static bool Load(ref int cutLeft, ref int cutTop, ref int cutRight, ref int cutBottom, ref bool crisp, ref bool keepAspect)
+        static bool Load(ref int cutLeft, ref int cutTop, ref int cutRight, ref int cutBottom, ref bool crisp, ref bool keepAspect, ref bool matchArea, ref int resolutionWidth)
         {
             if (!File.Exists(SettingsFile)) return false;
             string[] parts = File.ReadAllText(SettingsFile).Split(new[] { ' ', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
@@ -572,7 +682,7 @@ namespace ScreenShift
                 if (!int.TryParse(parts[0], out l) || !int.TryParse(parts[1], out b)) return false;
                 mode = parts[2];
             }
-            else if (parts.Length == 5 || parts.Length == 6)
+            else if (parts.Length == 5 || parts.Length == 6 || parts.Length == 8)
             {
                 if (!int.TryParse(parts[0], out l) || !int.TryParse(parts[1], out t) ||
                     !int.TryParse(parts[2], out r) || !int.TryParse(parts[3], out b)) return false;
@@ -580,8 +690,13 @@ namespace ScreenShift
             }
             else return false;
             if (l < 0 || t < 0 || r < 0 || b < 0 || (mode != "crisp" && mode != "fill")) return false;
-            if (parts.Length == 6 && parts[5] != "aspect" && parts[5] != "stretch") return false;
-            keepAspect = parts.Length != 6 || parts[5] == "aspect";
+            if (parts.Length >= 6 && parts[5] != "aspect" && parts[5] != "stretch") return false;
+            int width = 0;
+            if (parts.Length == 8 && ((parts[6] != "area" && parts[6] != "original") ||
+                !int.TryParse(parts[7], out width) || width < 0 || width > 8192)) return false;
+            matchArea = parts.Length == 8 && parts[6] == "area";
+            resolutionWidth = width;
+            keepAspect = parts.Length < 6 || parts[5] == "aspect";
             cutLeft = l;
             cutTop = t;
             cutRight = r;
@@ -590,10 +705,10 @@ namespace ScreenShift
             return true;
         }
 
-        static void Save(int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect)
+        static void Save(int cutLeft, int cutTop, int cutRight, int cutBottom, bool crisp, bool keepAspect, bool matchArea, int resolutionWidth)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile));
-            File.WriteAllText(SettingsFile, cutLeft + " " + cutTop + " " + cutRight + " " + cutBottom + " " + (crisp ? "crisp" : "fill") + " " + (keepAspect ? "aspect" : "stretch"));
+            File.WriteAllText(SettingsFile, cutLeft + " " + cutTop + " " + cutRight + " " + cutBottom + " " + (crisp ? "crisp" : "fill") + " " + (keepAspect ? "aspect" : "stretch") + " " + (matchArea ? "area" : "original") + " " + resolutionWidth);
         }
     }
 }

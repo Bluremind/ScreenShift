@@ -14,6 +14,25 @@
 
 > 本版本的程序界面仍为英文／俄文。下方保留的原项目介绍、截图和官方下载链接描述的是上游版本；上游 EXE 不包含本 fork 的四边修改。本 fork 目前没有发布修改版 EXE。
 
+## v1.3.0：按选区比例调整分辨率 / Desktop resolution matching the selected area
+
+新增 **Match desktop to selected area (D)** 复选框，勾选后改变 Windows 的桌面分辨率，并铺满四边选定区域。与上一版拉伸不同，桌面本身采用选区比例，应用可以按新的宽屏或竖屏桌面重新布局。
+
+- 默认关闭，兼容已有设置；按 **D** 开关。
+- 旁边下拉框默认 **1:1, auto**：桌面分辨率等于可用区域的实际像素，避免缩放。
+- 另提供以 960、1280、1366、1600、1920、2560、3840 为宽度的选项，高度由选区比例计算。按 **F6** 可打开下拉框；列表获得焦点时方向键选择分辨率，点击背景后恢复边界调整。
+- 修改裁切边界时，保留所选宽度并自动更新高度。由于像素必须为整数，高度按最近整数取整。
+- 例如可用区为 1620×880 时，可以选择 1620×880（1:1）、1366×742、1920×1043；不会用 1920×1080 强行改变选区比例。16:9 区域则会提供 1920×1080。
+- 更高桌面分辨率通常能容纳更多内容，但显示的字和控件更小；较低分辨率则更大，实际也受 Windows DPI 设置影响。
+- 此模式优先于 Crisp/Fill，“保持原始比例”复选框禁用；取消后恢复原模式和比例偏好。
+- 显卡驱动可能拒绝自定义尺寸。应用前仍进行系统验证，应用后必须在 20 秒内确认；未确认会恢复之前的显示设置。
+
+**English:** Enable **Match desktop to selected area (D)** to change the actual Windows desktop resolution to the selected rectangle's aspect ratio and fill that rectangle. This lets applications lay out against the new desktop shape instead of stretching the original desktop. The adjacent dropdown offers the native usable size (**1:1, auto**) and widths of 960/1280/1366/1600/1920/2560/3840 with automatically calculated heights, rounded to integer pixels. For a 1620×880 area, examples include 1366×742 and 1920×1043; a 16:9 area offers 1920×1080. Higher resolutions generally fit more content with smaller text; Windows DPI settings also affect sizing.
+
+Press **D** to toggle and **F6** to open the resolution dropdown. Arrow keys navigate the focused dropdown; click the background to resume boundary adjustment. Resizing the selection updates the resolution heights while retaining the chosen width. Area-resolution mode overrides Crisp/Fill and disables the original-aspect checkbox. Unchecking restores the previous mode. Driver support for custom resolutions varies; system validation and the 20-second confirmation/revert still apply.
+
+新配置 / New settings: `left top right bottom crisp|fill aspect|stretch area|original width`。例如 / Example: `100 50 200 150 fill aspect area 1920`。`width=0` 自动使用选区原生尺寸 / uses the native usable size. 三项、五项和六项旧配置均兼容，默认不开启此模式 / Legacy three-, five- and six-value settings keep this mode disabled.
+
 ## v1.2.0：可选保持比例 / Optional aspect ratio
 
 校准界面底部新增 **Keep original aspect ratio** 复选框，默认勾选。Fill 模式下取消勾选可铺满四边选定的区域；按 **A** 也可切换。选项随设置保存。Crisp 保持 1:1 显示，此选项在 Crisp 下禁用，切回 Fill 后恢复之前选择。
@@ -68,7 +87,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
 
 文件位置：`%LOCALAPPDATA%\ScreenShift\settings.txt`。
 
-新格式为 `左 上 右 下 模式 比例选项`，例如 `100 50 200 150 fill stretch`。`aspect` 保持比例，`stretch` 拉伸铺满。旧的三项或五项格式仍兼容，默认保持比例。初次运行默认四边均为 0。
+当前格式详见 v1.3.0 说明。旧六项格式 `左 上 右 下 模式 比例选项`（例如 `100 50 200 150 fill stretch`）仍可读取。`aspect` 保持比例，`stretch` 拉伸铺满。旧的三项或五项格式仍兼容，默认保持比例。初次运行默认四边均为 0。
 
 - `ScreenShift.exe --apply`：直接应用已保存配置，不显示确认窗口。
 - `ScreenShift.exe --reset`：恢复完整屏幕并删除配置。
@@ -138,7 +157,7 @@ These checks do not change display settings. Actual GPU acceptance and interacti
 
 Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt`.
 
-The new format is `left top right bottom mode aspect-option`, for example `100 50 200 150 fill stretch`. Use `aspect` to preserve proportions or `stretch` to fill the selected rectangle. Legacy three- and five-value settings are accepted and default to preserving proportions. New configurations start with all four cuts at zero.
+See v1.3.0 above for the current eight-value format. The previous six-value format `left top right bottom mode aspect-option`, for example `100 50 200 150 fill stretch`, is still accepted. Use `aspect` to preserve proportions or `stretch` to fill the selected rectangle. Legacy three- and five-value settings are accepted and default to preserving proportions. New configurations start with all four cuts at zero.
 
 - `ScreenShift.exe --apply`: apply the saved settings directly without a confirmation dialog.
 - `ScreenShift.exe --reset`: restore the full screen and delete saved settings.
@@ -158,7 +177,7 @@ Public source availability does not grant unrestricted redistribution rights. Fo
 
 ## 签名与校验 / Signing and verification
 
-本 fork 版本标识为 `1.2.0-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
+本 fork 版本标识为 `1.3.0-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
 
 **本机测试签名（Hao）：**
 
@@ -178,7 +197,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Sign -Certifica
 
 默认从 `CurrentUser\My` 选取证书；机器证书库使用 `-MachineStore`。脚本检查证书、执行 SHA-256 签名和时间戳、验证信任及签名者，成功后才写入校验文件。不要把私钥或密码提交到 Git。云签名服务需要对应服务配置，此脚本的证书库方式不自动配置云账号。
 
-**English:** The fork is identified as `1.2.0-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
+**English:** The fork is identified as `1.3.0-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
 
 For trusted signing, obtain a code-signing certificate, configure private-key access and install the Windows SDK Signing Tools. Run `build.ps1 -Sign` using the certificate thumbprint, SignTool path and your provider's RFC 3161 timestamp URL as shown above. The script validates the selected certificate, signs with SHA-256, timestamps, verifies the result, then writes the checksum. Cloud-signing accounts require provider-specific setup. Neither self-signing nor trusted signing bypasses Gmail's executable-attachment policy or guarantees SmartScreen reputation. Distribution still requires the author's permission.
 
