@@ -12,7 +12,31 @@
 
 本仓库是 [Bluremind/ScreenShift](https://github.com/Bluremind/ScreenShift) 的 fork，增加 **左、上、右、下四个边界独立调整**，用于将完整 Windows 桌面放到损坏屏幕仍可用的矩形区域内。原作者：Bluremind；原版权声明和许可证保持不变。
 
-> 本版本的程序界面仍为英文／俄文。下方保留的原项目介绍、截图和官方下载链接描述的是上游版本；上游 EXE 不包含本 fork 的四边修改。本 fork 目前没有发布修改版 EXE。
+> 本版本界面支持中文、英语、日语、韩语和俄语，可在 Language 下拉框即时切换。下方保留的原项目介绍、截图和官方下载链接描述的是上游版本；上游 EXE 不包含本 fork 的四边修改。本 fork 目前没有发布修改版 EXE。
+
+## v1.4.0：驱动兼容模式与五种语言 / Driver compatibility and five languages
+
+**非标准比例被 Windows 拒绝的原因：** 按选区比例计算出的分辨率（如 1620×880、1920×1043）不一定被显卡驱动支持。尺寸计算正确不代表 Windows 能应用它。本机只读诊断中这些自定义模式返回错误码 31，而枚举出的标准模式通过验证。
+
+分辨率列表现在区分 **自定义** 和 **驱动模式**。自定义模式验证失败时，程序按比例和大小挑选驱动模式，逐个调用 `SDC_VALIDATE`；找到通过验证的方案后，先询问是否尝试，再临时应用并等待 20 秒确认。拒绝替代方案不会应用它。未找到兼容方案时，会显示失败阶段、错误码、分辨率、选区及 Windows 错误描述，并写入 `%LOCALAPPDATA%\ScreenShift\last-error.txt`。
+
+**驱动模式保持画面比例，在所选区域内居中显示，可能留黑边。** 对于驱动不支持的任意比例，不能保证“正常比例、不留黑边、任意分辨率”三者同时成立。不会自动改回拉伸模式，也不使用允许系统任意调整模式的标志。
+
+说明区域上方新增 **Language / 语言** 下拉框（快捷键 **F7**）：English、简体中文、日本語、한국어、Русский。选中后即时更新说明、选项和确认对话框，独立保存于 `%LOCALAPPDATA%\ScreenShift\language.txt`。命令行 `--lang=en|zh|ja|ko|ru` 可覆盖本次启动语言；旧的显示配置保持兼容。源码翻译表位于 `UiText.cs`。
+
+**English:** Custom resolutions derived from a selection may be rejected by the GPU driver even when their geometry is correct. The dropdown now labels custom and driver-enumerated resolutions separately. On validation failure, the app ranks driver modes by aspect ratio and size and validates candidates without applying them. It asks before trying a validated alternative, then retains the 20-second keep/revert trial. Driver modes preserve proportions and may leave margins inside the selected region. Exact arbitrary aspect ratios without margins cannot be guaranteed on unsupported hardware.
+
+Failures now report the stage, numeric error code, desktop size, output rectangle and Windows error text. Details are saved to `%LOCALAPPDATA%\ScreenShift\last-error.txt`. The new **Language** dropdown (**F7**) switches English, Simplified Chinese, Japanese, Korean and Russian immediately and saves the choice independently in `language.txt`. Use `--lang=en|zh|ja|ko|ru` for a launch-time override. Translations live in `UiText.cs`.
+
+Additional checks / 附加检查：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\compatibility-language.ps1
+# Queries and validates sample configurations only; never applies or saves display changes.
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\diagnose-display.ps1
+```
+
+Driver choices are stored as `width * 10000 + height` in the last settings field; select them through the UI instead of editing this value manually. Existing width-only choices and old settings remain readable.
 
 ## v1.3.0：按选区比例调整分辨率 / Desktop resolution matching the selected area
 
@@ -109,7 +133,7 @@ GitHub Releases 可以附加 EXE 供下载，和 Git 源码提交相互独立；
 
 This is a fork of [Bluremind/ScreenShift](https://github.com/Bluremind/ScreenShift) that adds **independent left, top, right and bottom boundaries**, so the entire Windows desktop can fit within the usable rectangular part of a damaged panel. Original author: Bluremind. The original copyright notices and license are retained.
 
-The application UI remains English/Russian. The upstream introduction, screenshots and official download links below describe the upstream version; those binaries do not include this fork's changes. This fork has not published a modified executable release.
+The application UI supports English, Simplified Chinese, Japanese, Korean and Russian through the Language dropdown. The upstream introduction, screenshots and official download links below describe the upstream version; those binaries do not include this fork's changes. This fork has not published a modified executable release.
 
 ### Changes in this fork
 
@@ -177,7 +201,7 @@ Public source availability does not grant unrestricted redistribution rights. Fo
 
 ## 签名与校验 / Signing and verification
 
-本 fork 版本标识为 `1.3.0-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
+本 fork 版本标识为 `1.4.0-four-edge`。普通构建输出未签名 EXE，并生成 `dist\ScreenShift.exe.sha256`；校验值用于核对文件，不代表安全认证。
 
 **本机测试签名（Hao）：**
 
@@ -197,7 +221,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Sign -Certifica
 
 默认从 `CurrentUser\My` 选取证书；机器证书库使用 `-MachineStore`。脚本检查证书、执行 SHA-256 签名和时间戳、验证信任及签名者，成功后才写入校验文件。不要把私钥或密码提交到 Git。云签名服务需要对应服务配置，此脚本的证书库方式不自动配置云账号。
 
-**English:** The fork is identified as `1.3.0-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
+**English:** The fork is identified as `1.4.0-four-edge`. A normal build produces an unsigned EXE and SHA-256 checksum. `self-sign.ps1 -Publisher Hao` creates/reuses a one-year local development certificate with a non-exportable private key and signs a separate copy in `dist/self-signed`. It does not install a trusted root or add a trusted timestamp. An untrusted-chain result is expected; this is not a publicly trusted release.
 
 For trusted signing, obtain a code-signing certificate, configure private-key access and install the Windows SDK Signing Tools. Run `build.ps1 -Sign` using the certificate thumbprint, SignTool path and your provider's RFC 3161 timestamp URL as shown above. The script validates the selected certificate, signs with SHA-256, timestamps, verifies the result, then writes the checksum. Cloud-signing accounts require provider-specific setup. Neither self-signing nor trusted signing bypasses Gmail's executable-attachment policy or guarantees SmartScreen reputation. Distribution still requires the author's permission.
 

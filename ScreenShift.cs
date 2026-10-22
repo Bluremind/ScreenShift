@@ -19,14 +19,6 @@ using System.Windows.Forms;
 
 namespace ScreenShift
 {
-    // UI language: Russian when Windows is set to Russian, English otherwise. `--lang=en|ru` overrides.
-    public static class L
-    {
-        public static bool Russian = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru";
-        public static string T(string ru, string en) { return Russian ? ru : en; }
-        public static string Caption { get { return T("Сдвиг экрана", "Screen Shift"); } }
-    }
-
     public static class Native
     {
         [DllImport("user32.dll")] public static extern int GetDisplayConfigBufferSizes(uint flags, out uint numPaths, out uint numModes);
@@ -80,9 +72,7 @@ namespace ScreenShift
                 if (type == DesktopImage && c.img < 0) c.img = i;
             }
             if (np != 1 || c.src < 0 || c.tgt < 0 || c.img < 0)
-                throw new Exception(L.T(
-                    "Нужен ровно один включённый экран без внешних мониторов (сейчас путей: " + np + ").",
-                    "Exactly one active display is required, with no external monitors (active paths: " + np + ")."));
+                throw new Exception(L.F("single", np));
             return c;
         }
 
@@ -147,6 +137,45 @@ namespace ScreenShift
     public static class Planner
     {
         static List<Size> crispModes;
+        static List<Size> driverModes;
+        public static List<Size> DriverModes()
+        {
+            if (driverModes != null) return driverModes;
+            var list = new List<Size>();
+            var dm = new Native.DEVMODE();
+            dm.dmSize = (short)Marshal.SizeOf(typeof(Native.DEVMODE));
+            for (int i = 0; Native.EnumDisplaySettingsEx(null, i, ref dm, 0); i++)
+            {
+                Size s = new Size(dm.dmPelsWidth, dm.dmPelsHeight);
+                if (s.Width > 0 && s.Height > 0 && s.Width <= 8192 && s.Height <= 8192 && !list.Contains(s)) list.Add(s);
+            }
+            list.Sort((a, b) => a.Width != b.Width ? a.Width.CompareTo(b.Width) : a.Height.CompareTo(b.Height));
+            return driverModes = list;
+        }
+        // Packed explicit driver dimensions are distinct from custom width-only selections.
+        public static int DriverKey(Size size) { return size.Width * 10000 + size.Height; }
+        public static bool ValidResolutionKey(int key)
+        {
+            return key >= 0 && (key <= 8192 || (key / 10000 >= 1 && key / 10000 <= 8192 && key % 10000 >= 1 && key % 10000 <= 8192));
+        }
+        public static Rectangle Fit(Size desktop, Rectangle area)
+        {
+            double scale = Math.Min((double)area.Width / desktop.Width, (double)area.Height / desktop.Height);
+            int w = Math.Max(1, Math.Min(area.Width, (int)Math.Round(desktop.Width * scale)));
+            int h = Math.Max(1, Math.Min(area.Height, (int)Math.Round(desktop.Height * scale)));
+            return new Rectangle(area.Left + (area.Width - w) / 2, area.Top + (area.Height - h) / 2, w, h);
+        }
+        public static List<Size> CompatibleCandidates(Size desired, Rectangle area, IEnumerable<Size> modes)
+        {
+            var list = new List<Size>(modes);
+            double aspect = (double)area.Width / area.Height;
+            list.Sort(delegate(Size a, Size b) {
+                double sa = Math.Abs(Math.Log(((double)a.Width / a.Height) / aspect)) * 10 + Math.Abs(Math.Log((double)a.Width / desired.Width));
+                double sb = Math.Abs(Math.Log(((double)b.Width / b.Height) / aspect)) * 10 + Math.Abs(Math.Log((double)b.Width / desired.Width));
+                return sa.CompareTo(sb);
+            });
+            return list;
+        }
 
         // Standard modes with the panel's aspect ratio, largest first; these can be shown 1:1 without blur.
         public static List<Size> CrispModes(Size panel)
@@ -179,7 +208,8 @@ namespace ScreenShift
         // Integer pixel dimensions approximate the selected aspect ratio to the nearest pixel.
         public static Size AreaResolution(Size area, int width)
         {
-            if (area.Width <= 0 || area.Height <= 0 || width < 0 || width > 8192) return Size.Empty;
+            if (area.Width <= 0 || area.Height <= 0 || !ValidResolutionKey(width)) return Size.Empty;
+            if (width > 8192) return new Size(width / 10000, width % 10000);
             if (width == 0) return area;
             int height = (int)Math.Round((double)width * area.Height / area.Width);
             return height < 1 || height > 8192 ? Size.Empty : new Size(width, height);
@@ -196,7 +226,7 @@ namespace ScreenShift
             {
                 desktop = AreaResolution(new Size(vw, vh), resolutionWidth);
                 if (desktop.IsEmpty) return false;
-                region = new Rectangle(cutLeft, cutTop, vw, vh);
+                region = resolutionWidth > 8192 ? Fit(desktop, new Rectangle(cutLeft, cutTop, vw, vh)) : new Rectangle(cutLeft, cutTop, vw, vh);
                 return true;
             }
             if (crisp)
@@ -234,6 +264,8 @@ namespace ScreenShift
         readonly CheckBox aspectBox;
         readonly CheckBox resolutionBox;
         readonly ComboBox resolutionList;
+        readonly ComboBox languageList;
+        readonly Label languageLabel;
         bool updatingResolutions;
         int resolutionWidth;
         public bool MatchArea { get { return resolutionBox.Checked; } }
@@ -264,7 +296,7 @@ namespace ScreenShift
             BackColor = Color.Black;
             DoubleBuffered = true;
             aspectBox = new CheckBox {
-                Text = L.T("Сохранять пропорции (A; только Fill)", "Keep original aspect ratio (A; Fill only)"),
+                Text = L.Get("aspect"),
                 Checked = keepAspect, ForeColor = Color.White, BackColor = Color.FromArgb(24, 24, 24),
                 AutoSize = false, Font = new Font("Segoe UI", 16f, GraphicsUnit.Pixel), TabStop = true,
                 AccessibleName = "Keep original aspect ratio"
@@ -273,7 +305,7 @@ namespace ScreenShift
             Controls.Add(aspectBox);
             this.resolutionWidth = resolutionWidth;
             resolutionBox = new CheckBox {
-                Text = L.T("Разрешение по области (D)", "Match desktop to selected area (D)"),
+                Text = L.Get("area"),
                 Checked = matchArea, ForeColor = Color.White, BackColor = Color.FromArgb(24, 24, 24),
                 Font = new Font("Segoe UI", 14f, GraphicsUnit.Pixel),
                 AccessibleName = "Match desktop resolution to selected area"
@@ -291,6 +323,18 @@ namespace ScreenShift
             };
             Controls.Add(resolutionBox);
             Controls.Add(resolutionList);
+            languageLabel = new Label { Text = "Language / 语言", ForeColor = Color.White, BackColor = BackColor, TextAlign = ContentAlignment.MiddleRight };
+            languageList = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, AccessibleName = "Language" };
+            languageList.Items.AddRange(L.Names);
+            languageList.SelectedIndex = Array.IndexOf(L.Codes, L.Language);
+            languageList.SelectedIndexChanged += delegate {
+                if (languageList.SelectedIndex < 0) return;
+                L.Language = L.Codes[languageList.SelectedIndex];
+                try { L.SaveLanguage(); } catch (IOException ex) { MessageBox.Show(ex.Message, L.Caption); } catch (UnauthorizedAccessException ex) { MessageBox.Show(ex.Message, L.Caption); }
+                aspectBox.Text = L.Get("aspect"); resolutionBox.Text = L.Get("area"); Text = L.Caption;
+                PositionAspectBox(); Invalidate();
+            };
+            Controls.Add(languageLabel); Controls.Add(languageList);
             PositionAspectBox();
         }
 
@@ -348,36 +392,11 @@ namespace ScreenShift
                 g.FillRectangle(yellow, cutLeft, lineY - thickness, lineX - cutLeft, thickness);
             }
 
-            string mode = crisp
-                ? (fits
-                    ? string.Format(L.T("чётко, без сжатия (рабочий стол {0}×{1})", "crisp, 1:1 (desktop {0}×{1})"), desktop.Width, desktop.Height)
-                    : L.T("чётко — не помещается, уменьшите полосы", "crisp — does not fit, reduce the strips"))
-                : string.Format(L.T("вся картинка, сжата до {0:0.#}%", "fill, scaled to {0:0.#}%"), 100.0 * region.Width / w);
-            if (!crisp && !keepAspect)
-                mode = L.T("Fill: растянуть на всю область (искажение пропорций)", "fill: stretch to selected area (changes proportions)");
-            if (matchArea)
-                mode = fits ? string.Format(L.T("по области: рабочий стол {0}×{1} (F6: выбор)", "match area: desktop {0}×{1} (F6: choose)"), desktop.Width, desktop.Height)
-                    : L.T("недопустимое разрешение", "invalid desktop resolution");
-            string body = L.Russian
-                ? "Жёлтые линии — новые края картинки. Всё красное станет чёрным.\n" +
-                  "← →: левая; ↑ ↓: нижняя; Ctrl + ← →: правая; Ctrl + ↑ ↓: верхняя\n" +
-                  "Шаг: 4 px; Shift: 20 px; Alt: 1 px\n" +
-                  "Подведите каждую линию вплотную к чёрной полосе, но так, чтобы её ещё было видно.\n" +
-                  "Если клавиши не действуют — щёлкните по экрану.\n\n" +
-                  string.Format("Слева: {0} px   Сверху: {1} px   Справа: {2} px   Снизу: {3} px\n", cutLeft, cutTop, cutRight, cutBottom) +
-                  "Tab — режим: " + mode + "\n\n" +
-                  "Enter — применить      R — убрать сдвиг      Esc — выйти"
-                : "Yellow lines are the new edges of the picture. Everything red will turn black.\n" +
-                  "← →: left edge; ↑ ↓: bottom edge; Ctrl + ← →: right edge; Ctrl + ↑ ↓: top edge\n" +
-                  "Step: 4 px; Shift: 20 px; Alt: 1 px\n" +
-                  "Place each line right next to the dead strip, but keep the strip itself out of view.\n" +
-                  "If the keys do nothing, click on the screen.\n\n" +
-                  string.Format("Left: {0} px   Top: {1} px   Right: {2} px   Bottom: {3} px\n", cutLeft, cutTop, cutRight, cutBottom) +
-                  "Tab — mode: " + mode + "\n\n" +
-                  "Enter — apply      R — remove the shift      Esc — exit";
-
+            string mode = !fits ? L.Get("invalid") : matchArea ? L.F("desktop", desktop.Width, desktop.Height) :
+                crisp ? L.F("crisp", desktop.Width, desktop.Height) : L.Get(keepAspect ? "fill" : "stretch");
+            string body = L.F("instructions", cutLeft, cutTop, cutRight, cutBottom, mode);
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-            var visible = new Rectangle(cutLeft + 8, cutTop + 8, lineX - cutLeft - 16, lineY - cutTop - 112);
+            var visible = new Rectangle(cutLeft + 8, cutTop + 48, lineX - cutLeft - 16, lineY - cutTop - 152);
             if (visible.Width <= 0 || visible.Height <= 0) return;
             using (var title = new Font("Segoe UI", Math.Max(12f, Math.Min(h / 30f, visible.Height / 10f)), FontStyle.Bold, GraphicsUnit.Pixel))
             using (var font = new Font("Segoe UI", Math.Max(8f, Math.Min(h / 50f, Math.Min(visible.Height / 18f, visible.Width / 85f))), GraphicsUnit.Pixel))
@@ -395,9 +414,10 @@ namespace ScreenShift
         {
             Keys code = keyData & Keys.KeyCode;
             // Let the focused dropdown navigate resolutions without moving calibration edges.
-            if (resolutionList.Focused && (code == Keys.Up || code == Keys.Down || code == Keys.Left || code == Keys.Right ||
+            ComboBox focusedList = languageList.Focused ? languageList : resolutionList;
+            if (focusedList.Focused && (code == Keys.Up || code == Keys.Down || code == Keys.Left || code == Keys.Right ||
                 code == Keys.Home || code == Keys.End || code == Keys.PageUp || code == Keys.PageDown || code == Keys.F4 ||
-                (resolutionList.DroppedDown && (code == Keys.Enter || code == Keys.Escape))))
+                (focusedList.DroppedDown && (code == Keys.Enter || code == Keys.Escape))))
                 return base.ProcessCmdKey(ref msg, keyData);
             int step = (keyData & Keys.Alt) != 0 ? 1 : (keyData & Keys.Shift) != 0 ? 20 : 4;
             int maxX = Math.Max(0, panel.Width - Math.Min(640, panel.Width));
@@ -413,6 +433,7 @@ namespace ScreenShift
                 case Keys.A: if (!Crisp && !MatchArea) aspectBox.Checked = !aspectBox.Checked; break;
                 case Keys.D: resolutionBox.Checked = !resolutionBox.Checked; break;
                 case Keys.F6: if (MatchArea) { resolutionList.Focus(); resolutionList.DroppedDown = true; } return true;
+                case Keys.F7: languageList.Focus(); languageList.DroppedDown = true; return true;
                 case Keys.Enter: DialogResult = DialogResult.OK; return true;
                 case Keys.R: DialogResult = DialogResult.Retry; return true;
                 case Keys.Escape: DialogResult = DialogResult.Cancel; return true;
@@ -426,6 +447,8 @@ namespace ScreenShift
 
         void PositionAspectBox()
         {
+            languageLabel.SetBounds(CutLeft + 16, CutTop + 12, 130, 26);
+            languageList.SetBounds(CutLeft + 154, CutTop + 12, 160, 26);
             aspectBox.Enabled = !Crisp && !MatchArea;
             int width = Math.Min(480, Math.Max(1, panel.Width - CutLeft - CutRight - 32));
             aspectBox.SetBounds(CutLeft + (panel.Width - CutLeft - CutRight - width) / 2,
@@ -455,6 +478,7 @@ namespace ScreenShift
             {
                 resolutionList.Items.Clear();
                 var widths = new List<int> { 0, 960, 1280, 1366, 1600, 1920, 2560, 3840 };
+                foreach (Size driver in Planner.DriverModes()) widths.Add(Planner.DriverKey(driver));
                 if (resolutionWidth > 0 && !widths.Contains(resolutionWidth)) widths.Add(resolutionWidth);
                 int selected = 0;
                 foreach (int w in widths)
@@ -462,7 +486,7 @@ namespace ScreenShift
                     Size s = Planner.AreaResolution(area, w);
                     if (s.IsEmpty) continue;
                     var choice = new ResolutionChoice { Width = w, Label = s.Width + " × " + s.Height +
-                        (w == 0 ? L.T(" (1:1, авто)", " (1:1, auto)") : "") };
+                        (w == 0 ? L.Get("native") : w > 8192 ? L.Get("driver") : L.Get("custom")) };
                     int index = resolutionList.Items.Add(choice);
                     if (w == resolutionWidth) selected = index;
                 }
@@ -524,9 +548,7 @@ namespace ScreenShift
 
         void UpdateText()
         {
-            label.Text = L.T(
-                "Картинку видно целиком?\nЕсли ничего не нажать, через " + secondsLeft + " с всё вернётся как было.",
-                "Can you see the whole picture?\nIf you press nothing, everything reverts in " + secondsLeft + " s.");
+            label.Text = L.F("confirm", secondsLeft);
         }
 
         protected override void Dispose(bool disposing)
@@ -548,12 +570,13 @@ namespace ScreenShift
             try { Native.SetProcessDpiAwarenessContext(new IntPtr(-4)); }
             catch (EntryPointNotFoundException) { Native.SetProcessDPIAware(); }
             Application.EnableVisualStyles();
+            L.LoadLanguage();
 
             string command = "";
             foreach (string arg in args)
             {
                 string a = arg.ToLowerInvariant();
-                if (a.StartsWith("--lang=")) L.Russian = a.Substring("--lang=".Length) == "ru";
+                if (a.StartsWith("--lang=")) L.Language = L.Normalize(a.Substring("--lang=".Length));
                 else if (command.Length == 0) command = a;
             }
             try { return Run(command); }
@@ -584,7 +607,9 @@ namespace ScreenShift
                 Rectangle region;
                 if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, matchArea, resolutionWidth, out desktop, out region)) return 1;
                 if (current.Desktop == desktop && current.Region == region) return 0;
-                DisplayConfig.Check(current.With(desktop, region).Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
+                DisplayConfig candidate = current.With(desktop, region);
+                DisplayConfig.Check(candidate.Apply(DisplayConfig.SDC_VALIDATE), L.Get("Could not apply the shift"));
+                DisplayConfig.Check(candidate.Apply(DisplayConfig.SDC_APPLY | DisplayConfig.SDC_SAVE_TO_DATABASE),
                     L.T("Не удалось применить сдвиг", "Could not apply the shift"));
                 return 0;
             }
@@ -626,20 +651,48 @@ namespace ScreenShift
             if (!Planner.Plan(current.Panel, cutLeft, cutTop, cutRight, cutBottom, crisp, keepAspect, matchArea, resolutionWidth, out newDesktop, out newRegion))
             {
                 if (wasShifted) Restore(current);
-                MessageBox.Show(L.T(
-                    "Разрешение не подходит. Уменьшите полосы, выберите другое разрешение или режим Fill.",
-                    "The selected desktop resolution does not fit. Reduce the cuts, choose another resolution, or switch to Fill."), Caption);
+                MessageBox.Show(L.Get("invalid"), Caption);
                 return 1;
             }
             DisplayConfig next = current.With(newDesktop, newRegion);
             int rc = next.Apply(DisplayConfig.SDC_VALIDATE);
-            if (rc == 0) rc = next.Apply(DisplayConfig.SDC_APPLY);
+            string stage = "SDC_VALIDATE";
+            if (rc != 0 && matchArea && rc != 5 && rc != 50)
+            {
+                Rectangle area = new Rectangle(cutLeft, cutTop, current.Panel.Width - cutLeft - cutRight, current.Panel.Height - cutTop - cutBottom);
+                foreach (Size candidate in Planner.CompatibleCandidates(newDesktop, area, Planner.DriverModes()))
+                {
+                    Rectangle candidateRegion = Planner.Fit(candidate, area);
+                    if (candidate == newDesktop && candidateRegion == newRegion) continue;
+                    DisplayConfig alternative = current.With(candidate, candidateRegion);
+                    if (alternative.Apply(DisplayConfig.SDC_VALIDATE) != 0) continue;
+                    // No changes have been applied. Ask before substituting the user's resolution.
+                    if (MessageBox.Show(L.F("fallback", newDesktop.Width, newDesktop.Height, rc, candidate.Width, candidate.Height),
+                        Caption, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                    {
+                        if (wasShifted) Restore(current);
+                        return 0;
+                    }
+                    newDesktop = candidate; newRegion = candidateRegion;
+                    resolutionWidth = Planner.DriverKey(candidate);
+                    next = alternative; rc = 0;
+                    break;
+                }
+            }
+            if (rc == 0) { stage = "SDC_APPLY"; rc = next.Apply(DisplayConfig.SDC_APPLY); }
             if (rc != 0)
             {
-                if (wasShifted) Restore(current);
-                MessageBox.Show(L.T(
-                    "Windows не приняла такой режим (код " + rc + "). Ничего не изменено.",
-                    "Windows rejected this mode (code " + rc + "). Nothing was changed."), Caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (wasShifted || stage == "SDC_APPLY") Restore(current);
+                string detail = new System.ComponentModel.Win32Exception(rc).Message;
+                string diagnostic = Path.Combine(Path.GetDirectoryName(SettingsFile), "last-error.txt");
+                try {
+                    Directory.CreateDirectory(Path.GetDirectoryName(diagnostic));
+                    File.WriteAllText(diagnostic, "UTC: " + DateTime.UtcNow.ToString("o") + "\r\nStage: " + stage + "\r\nCode: " + rc +
+                        "\r\nMessage: " + detail + "\r\nPanel: " + current.Panel + "\r\nDesktop: " + newDesktop + "\r\nRegion: " + newRegion +
+                        "\r\nDriver modes: " + string.Join(", ", Planner.DriverModes().ConvertAll(s => s.Width + "x" + s.Height).ToArray()));
+                } catch (IOException) { diagnostic = "(log unavailable)"; } catch (UnauthorizedAccessException) { diagnostic = "(log unavailable)"; }
+                MessageBox.Show(L.F("rejected", stage, rc, newDesktop.Width, newDesktop.Height, newRegion, detail, diagnostic),
+                    Caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return 1;
             }
 
@@ -693,7 +746,7 @@ namespace ScreenShift
             if (parts.Length >= 6 && parts[5] != "aspect" && parts[5] != "stretch") return false;
             int width = 0;
             if (parts.Length == 8 && ((parts[6] != "area" && parts[6] != "original") ||
-                !int.TryParse(parts[7], out width) || width < 0 || width > 8192)) return false;
+                !int.TryParse(parts[7], out width) || !Planner.ValidResolutionKey(width))) return false;
             matchArea = parts.Length == 8 && parts[6] == "area";
             resolutionWidth = width;
             keepAspect = parts.Length < 6 || parts[5] == "aspect";

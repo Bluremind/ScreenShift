@@ -45,7 +45,7 @@ if (-not (Test-Path $csc)) { throw "csc.exe not found at $csc (.NET Framework 4.
 & $csc /nologo /target:winexe /platform:anycpu /optimize+ `
     /out:"$out\ScreenShift.exe" `
     /r:System.Windows.Forms.dll /r:System.Drawing.dll `
-    "$root\ScreenShift.cs" "$root\AssemblyInfo.cs"
+    "$root\ScreenShift.cs" "$root\UiText.cs" "$root\AssemblyInfo.cs"
 if ($LASTEXITCODE -ne 0) { throw "Build failed (csc exit code $LASTEXITCODE)." }
 
 if ($Sign) {
