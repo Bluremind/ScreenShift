@@ -79,7 +79,13 @@ namespace ScreenShift
         int Get(int offset) { return BitConverter.ToInt32(modes, offset); }
         void Set(int offset, int value) { BitConverter.GetBytes(value).CopyTo(modes, offset); }
 
-        public Size Panel { get { return new Size(Get(tgt * ModeSize + 40), Get(tgt * ModeSize + 44)); } }
+        public uint Rotation { get { return BitConverter.ToUInt32(paths, 40); } }
+        public Size SignalSize { get { return new Size(Get(tgt * ModeSize + 40), Get(tgt * ModeSize + 44)); } }
+        // Target timings stay in physical orientation; source/desktop coordinates rotate.
+        public Size Panel
+        {
+            get { Size s = SignalSize; return Rotation == 2 || Rotation == 4 ? new Size(s.Height, s.Width) : s; }
+        }
         public Size Desktop { get { return new Size(Get(src * ModeSize + 16), Get(src * ModeSize + 20)); } }
         public Size PathSource { get { return new Size(Get(img * ModeSize + 16), Get(img * ModeSize + 20)); } }
         public Rectangle Region
@@ -192,7 +198,8 @@ namespace ScreenShift
             while (b != 0) { int remainder = a % b; a = b; b = remainder; }
             string exact = (mode.Width / a) + ":" + (mode.Height / a);
             if (mode.Width / a <= 64 && mode.Height / a <= 64) return exact;
-            int[,] common = { {1,1}, {4,3}, {5,3}, {5,4}, {16,9}, {16,10}, {64,27}, {43,18}, {32,9} };
+            int[,] common = { {1,1}, {4,3}, {5,3}, {5,4}, {16,9}, {16,10}, {64,27}, {43,18}, {32,9},
+                {3,4}, {3,5}, {4,5}, {9,16}, {10,16}, {27,64}, {18,43}, {9,32} };
             for (int i = 0; i < common.GetLength(0); i++)
                 if (Math.Abs(Math.Log(((double)mode.Width / mode.Height) / ((double)common[i,0] / common[i,1]))) <= 0.002)
                     return "≈" + common[i,0] + ":" + common[i,1];

@@ -14,6 +14,12 @@
 
 > 本版本界面支持中文、英语、日语、韩语和俄语，可在 Language 下拉框即时切换。下方保留的原项目介绍、截图和官方下载链接描述的是上游版本；上游 EXE 不包含本 fork 的四边修改。本 fork 目前没有发布修改版 EXE。
 
+## v1.6.1：竖屏坐标修正 / Portrait coordinate fix
+
+修正 90° / 270° 旋转时仍使用物理信号宽高的问题：窗口、裁切和恢复现在使用旋转后的桌面尺寸，同时保留显示器信号时序和系统旋转方向。竖屏比例标签支持约 9:16 等。请先关闭校准窗口，在 Windows 设置方向后重新打开程序，再调整四边；已有裁切数值不会自动映射到旋转后的坏边位置。四方向坐标回归测试通过，实际竖屏显示仍需在对应硬件上确认。
+
+For 90° / 270° rotation, calibration, crop placement and reset now use rotated desktop dimensions while preserving target signal timings and rotation. Portrait ratio labels include approximate 9:16. Close calibration before changing orientation in Windows, then reopen and adjust the edges. Saved cuts are not automatically remapped to the rotated damaged edges. Geometry tests cover all four rotations; actual portrait output still needs hardware verification.
+
 ## v1.6.0：先验证可用性，再筛选比例 / Validate first, then filter by aspect ratio
 
 本节取代下方 v1.3–v1.5 的分辨率列表说明。旧版先筛选比例，把未经支持的超宽测试预设当成候选，可能留下全部无法应用的选项；现已修正。
