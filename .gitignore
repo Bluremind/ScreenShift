@@ -3,3 +3,7 @@ dist/
 *.exe
 *.pdb
 .vs/
+# Signing secrets must never be committed.
+*.pfx
+*.p12
+*.key

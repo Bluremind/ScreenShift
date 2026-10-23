@@ -1,8 +1,9 @@
 using System.Reflection;
 
 [assembly: AssemblyTitle("ScreenShift")]
-[assembly: AssemblyDescription("Moves the Windows desktop off the dead strips of a damaged laptop panel.")]
+[assembly: AssemblyDescription("Unofficial four-edge calibration fork of ScreenShift by wangcanhao-cmd.")]
 [assembly: AssemblyProduct("ScreenShift")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 Bluremind. Free for personal use; any other use requires a paid license.")]
-[assembly: AssemblyVersion("1.2.0.0")]
-[assembly: AssemblyFileVersion("1.2.0.0")]
+[assembly: AssemblyVersion("1.3.0.0")]
+[assembly: AssemblyFileVersion("1.3.0.0")]
+[assembly: AssemblyInformationalVersion("1.3.0-four-edge")]

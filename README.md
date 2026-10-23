@@ -1,159 +1,131 @@
-<div align="center">
+﻿# ScreenShift v1.3 — 屏幕裁切与兼容分辨率 / Screen cropping and compatible resolutions
 
-# ScreenShift
+将完整 Windows 桌面放进损坏屏幕仍可用的矩形区域。基于 [Bluremind/ScreenShift](https://github.com/Bluremind/ScreenShift)，原作者 Bluremind。需要 Windows 10+、一个活动显示器及兼容显卡驱动。
 
-**Your laptop screen is partly dead? Put the whole Windows desktop back on the part that still works.**
+Fit the entire Windows desktop into the usable rectangle of a damaged screen. Based on [Bluremind/ScreenShift](https://github.com/Bluremind/ScreenShift), originally by Bluremind. Requires Windows 10+, one active display and a compatible graphics driver.
 
-A tiny tool, free for personal use, that moves and fits the *entire* desktop (wallpaper, icons, Start button, taskbar) into the working area of a damaged panel. No drivers. No installer. One 24 KB file, in English and Russian.
+[中文](#中文) · [English](#english) · [Repository](https://github.com/wangcanhao-cmd/ScreenShift)
 
-[![Release](https://img.shields.io/github/v/release/Bluremind/ScreenShift?style=flat-square&color=2ea043)](https://github.com/Bluremind/ScreenShift/releases/latest)
-[![License: free for personal use](https://img.shields.io/badge/license-free%20for%20personal%20use-orange?style=flat-square)](LICENSE)
-[![Commercial license](https://img.shields.io/badge/all%20other%20use-paid%20license-blueviolet?style=flat-square)](COMMERCIAL.md)
-![Windows 10+](https://img.shields.io/badge/Windows-10%20%2B-0078d4?style=flat-square)
-![Size](https://img.shields.io/badge/size-24%20KB-8957e5?style=flat-square)
-![No telemetry](https://img.shields.io/badge/telemetry-none-lightgrey?style=flat-square)
+<a id="中文"></a>
 
-[**Download**](https://github.com/Bluremind/ScreenShift/releases/latest) · [Русский](README.ru.md) · [How it works](#how-it-works) · [FAQ](#faq)
+## v1.3 更新说明
 
-<img src="assets/hero.svg" alt="Before: part of the desktop is lost in a dead strip. After: the whole desktop fits the working area." width="860">
+上次四边裁切贡献 [PR #1](https://github.com/Bluremind/ScreenShift/pull/1) 已被原作者合并。本次将之后的开发与测试改动统一整理为 **v1.3**，以下描述当前实现。
 
-</div>
+- **可选保持比例：** Fill 默认保持原屏幕比例；取消勾选可拉伸铺满选区，但会改变文字和图像比例。
+- **兼容分辨率：** 从 Windows 枚举当前显示设备的模式，逐一验证分辨率与选区的组合，再保留最接近选区比例的一组。同组不同尺寸全部保留，显示 `4:3`、`5:4`、`16:9`、`9:16` 等比例；近似比例使用 `≈`。
+- **避免不可用选项：** 不提供猜测的超宽预设。调整边界后重新验证，没有可用模式时显示提示。应用前再次验证，失败时显示错误码并保存诊断日志。
+- **五种语言：** Language 下拉框顺序为 English、简体中文、Русский、日本語、한국어，可即时切换并保存选择。
+- **竖屏适配：** 四种旋转方向均进行双向坐标转换；界面使用旋转后的尺寸，底层显示配置使用旋转前的尺寸与矩形，修复竖屏启动 1610 错误。
+- **配置与构建：** 保存比例与分辨率选择，兼容旧配置；增加回归测试、可选代码签名和 SHA-256 校验。
 
----
+四边裁切、Crisp / Fill、默认 4 像素移动、Shift 20 像素、Alt 1 像素、应用后 20 秒确认及超时恢复均保留。校准区域至少为 640×360；某维度更小的屏幕保留该维度全长。
 
-## The problem
+### 操作方法
 
-A cracked corner, a failing display cable, a MacBook with the infamous "flexgate" dead strip, a panel that went black on one side. The laptop still works, but the edge of the picture is gone, and with it the **Start button, the leftmost desktop icons and half of every maximized window**.
-
-Windows has no setting for "this part of my screen is dead". Moving windows around doesn't help, because the taskbar and the desktop still sit under the dead strip.
-
-## The fix
-
-ScreenShift asks Windows' display stack to draw the desktop inside a smaller rectangle of the panel. Everything is moved together, so nothing hides under the dead area. The dead strips simply stay black.
-
-- **Everything fits.** Taskbar, Start button, icons, maximized windows.
-- **Calibrate in 30 seconds.** Move four yellow lines with the arrow keys until they touch the dead strip.
-- **Safe by design.** After applying, you have 20 seconds to press **Keep**. Do nothing and the old picture comes back on its own.
-- **Remembers your setup.** Re-apply it any time with `ScreenShift.exe --apply`.
-- **Two quality modes.** *Crisp* shows the desktop 1:1 at the largest standard resolution that fits. *Fill* uses the whole good area and scales the picture slightly.
-- **English and Russian.** The interface follows your Windows language. Force one with `--lang=en` or `--lang=ru`.
-- **Tiny and private.** One small exe, no installer, no network access, no telemetry. The code is a single readable C# file.
-
-## Quick start
-
-1. Download **`ScreenShift.exe`** from the [latest release](https://github.com/Bluremind/ScreenShift/releases/latest).
-2. Run it. A calibration screen opens.
-3. Use the arrow keys to move the **yellow lines** next to the dead strips. The arrows move the left and bottom lines, with **Ctrl** held they move the right and top ones. Hold **Shift** to move faster.
-4. Press **Tab** to choose *Crisp* or *Fill*, then **Enter** to apply.
-5. Press **Keep** within 20 seconds. Done.
-
-<div align="center">
-<img src="assets/calibration-en.png" alt="The calibration screen: yellow lines mark the new edges of the picture, red hatching marks what will turn black." width="720">
-<br>
-<sub>The calibration screen (rendered by the program itself, shown at half size). Yellow lines are the new edges of the picture.</sub>
-</div>
-
-> Windows may show a SmartScreen warning because the exe is not code-signed. See [Trust and verification](#trust-and-verification).
-
-## Commands
-
-| Command | What it does |
+| 按键 | 操作 |
 | --- | --- |
-| `ScreenShift.exe` | Open calibration. Enter applies, R removes the shift, Esc exits. |
-| `ScreenShift.exe --apply` | Re-apply the saved shift without asking. Handy for startup. |
-| `ScreenShift.exe --reset` | Remove the shift and delete the saved settings. |
-| `--lang=en` or `--lang=ru` | Add to any command to choose the interface language. |
+| ← / → | 移动左边界 |
+| ↑ / ↓ | 移动下边界 |
+| Ctrl + ← / → | 移动右边界 |
+| Ctrl + ↑ / ↓ | 移动上边界 |
+| Shift / Alt + 移动键 | 每次 20 / 1 像素 |
+| Tab | 切换 Crisp / Fill |
+| A | 切换保持原比例（Fill 且未启用选区分辨率时） |
+| D | 切换选区兼容分辨率 |
+| F6 / F7 | 聚焦分辨率 / 语言下拉框 |
+| Enter | 应用；20 秒内点击 Keep 保存，否则恢复 |
+| R / Esc | 重置 / 取消 |
 
-Settings are stored in `%LOCALAPPDATA%\ScreenShift\settings.txt` as five values: pixels cut on the left, top, right and bottom, and the mode (`crisp` or `fill`). Settings saved by version 1.1 and older (left, bottom, mode) still work.
+Crisp 按 1:1 显示可容纳的原屏幕比例模式；Fill 可等比缩放或拉伸。下拉框聚焦时方向键用于选择，点击校准背景后继续调整边界。
 
-### Re-apply after every boot
+改变系统方向前请关闭校准窗口，设置方向后重新打开并调整四边。保存的裁切值不会自动映射到旋转后的损坏边缘。程序使用 Windows 显示配置接口，不要求 NVIDIA 显卡；可用模式取决于当前设备和驱动，没有实现独立虚拟显示驱动。
 
-Windows or the GPU driver can drop the shift after a restart, sleep or driver reset. To restore it automatically, put a shortcut to `ScreenShift.exe --apply` in your Startup folder (press `Win + R`, type `shell:startup`).
+### 编译与验证
 
-## How it works
+使用 Windows 自带的 .NET Framework 4.x C# 编译器，无需 Visual Studio、现代 .NET SDK 或 NuGet：
 
-ScreenShift uses the Windows display configuration API (`SetDisplayConfig`, virtual-mode aware). It keeps the physical panel mode and changes two things:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\compatibility-language.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\rotation.ps1
+.\dist\ScreenShift.exe
+```
 
-1. the size of the **desktop** Windows renders, and
-2. the **rectangle on the panel** where that desktop is shown.
+测试不应用显示设置。AMD Radeon 780M 的 90° 竖屏全屏配置与 13 个系统模式在测试裁切区域通过 `SDC_VALIDATE`，不等于所有硬件都已验证。实际显示位置、应用与恢复仍需在目标设备交互确认。
 
-The GPU then scales or places the desktop into that rectangle in hardware. Windows itself believes it has a normal screen, so apps and the taskbar behave as usual. Calibration happens on an overlay that uses real panel pixels, so the lines you see are exactly where the picture will start.
+### 配置与命令
 
-## Compatibility
+配置位于 `%LOCALAPPDATA%\ScreenShift\settings.txt`，语言位于同目录 `language.txt`。
 
-| | |
+当前八项格式为 `左 上 右 下 crisp|fill aspect|stretch area|original 分辨率键`。枚举模式键为 `宽×10000+高`，例如 1920×1080 为 `19201080`。兼容旧三、五、六项格式及宽度值；建议通过界面保存，不手动猜测分辨率。
+
+- `--apply`：直接应用保存配置，不显示确认窗口。
+- `--reset`：恢复全屏并删除裁切配置。
+- `--lang=zh`：指定语言，可用 `en`、`zh`、`ru`、`ja`、`ko`。
+
+<a id="english"></a>
+
+## v1.3 release notes
+
+The previous four-edge contribution, [PR #1](https://github.com/Bluremind/ScreenShift/pull/1), was merged upstream. All subsequent development and testing changes are consolidated into **v1.3**. These notes describe the current implementation.
+
+- **Optional aspect preservation:** Fill preserves proportions by default. Disable it to stretch across the selected area, which may distort text and images.
+- **Compatible resolutions:** Enumerate the current device's Windows modes, validate each resolution and crop combination, then retain the closest accepted aspect family. Keep all sizes in that family, with labels such as `4:3`, `5:4`, `16:9` and `9:16`; rounded approximations use `≈`.
+- **Validated choices:** No guessed ultrawide presets. Edge changes refresh validation. An empty list displays an explanation. Validate again before applying, with error codes and diagnostic logging on failure.
+- **Five languages:** English, Simplified Chinese, Russian, Japanese and Korean, in that dropdown order, with live switching and saved preference.
+- **Portrait support:** Convert visible geometry to and from pre-rotation display coordinates for all four orientations, fixing portrait startup error 1610.
+- **Settings and builds:** Persist aspect and resolution choices while accepting legacy settings; include regression tests, optional signing and SHA-256 checksums.
+
+Four-edge calibration, Crisp / Fill, 4-pixel steps, Shift for 20 pixels, Alt for 1 pixel, and 20-second confirmation/revert remain available. Calibration retains at least 640×360 pixels, or the full panel dimension if smaller.
+
+### Controls
+
+| Keys | Action |
 | --- | --- |
-| **OS** | Windows 10 (version 1607 or newer) |
-| **Runtime** | .NET Framework 4.x, which is already part of Windows 10 |
-| **Displays** | One active display. With an external monitor connected, ScreenShift stops with a message and changes nothing. |
-| **Tested on** | MacBook Pro (2016) running Windows 10 via Boot Camp, AMD Radeon Pro 460 |
+| Left / Right | Move left edge |
+| Up / Down | Move bottom edge |
+| Ctrl + Left / Right | Move right edge |
+| Ctrl + Up / Down | Move top edge |
+| Shift / Alt + movement | Move 20 / 1 pixels |
+| Tab | Toggle Crisp / Fill |
+| A | Toggle aspect preservation in Fill without area resolution |
+| D | Toggle compatible area resolution |
+| F6 / F7 | Focus resolution / language dropdown |
+| Enter | Apply; Keep within 20 seconds to save, otherwise revert |
+| R / Esc | Reset / cancel |
 
-Support for the virtual display modes depends on the GPU driver. If Windows rejects the mode, ScreenShift tells you and leaves your display unchanged. Reports from other hardware are very welcome, please open an issue.
+Crisp uses a fitting mode with the panel's aspect at 1:1 pixels; Fill scales proportionally or stretches. Arrow keys navigate focused dropdowns; click the background to resume edge adjustment.
 
-## FAQ
+Close calibration before changing orientation in Windows, then reopen and adjust edges. Saved cuts are not remapped to rotated damage. The Windows display-configuration API works across graphics vendors; modes depend on the device and driver. No NVIDIA-specific API or custom virtual display driver is required.
 
-**Does this fix the broken screen?**
-No. It is a software workaround that makes a damaged screen usable. The dead strip stays dead. Replace the panel or cable when you can.
+### Build, validation and settings
 
-**Is it safe? Can I get stuck on a black screen?**
-The change is applied as a trial. Without your confirmation it reverts after 20 seconds. If you ever need to undo it manually, run `ScreenShift.exe --reset`, or just reboot if you never pressed **Keep**.
+Use the build and three test commands above in Windows PowerShell. The build uses the .NET Framework C# compiler and produces `dist\ScreenShift.exe`; Visual Studio, the modern .NET SDK and NuGet are unnecessary. Tests do not apply display settings. On an AMD Radeon 780M at 90°, identity and 13 enumerated modes passed `SDC_VALIDATE` for a sample crop. Visual placement, application and recovery still require interactive hardware testing.
 
-**Will text look blurry?**
-In *Crisp* mode the desktop is shown 1:1 at a standard resolution, so text stays sharp. *Fill* mode scales the picture by a few percent. Use Tab during calibration to compare.
+Settings: `%LOCALAPPDATA%\ScreenShift\settings.txt`; language: `language.txt` beside it. Eight-value format: `left top right bottom crisp|fill aspect|stretch area|original resolution-key`. Explicit keys encode `width*10000+height`, e.g. `19201080` for 1920×1080. Legacy three-, five- and six-value settings and width-only keys remain readable. Prefer saving through the UI.
 
-**Why not just lower the resolution?**
-A lower resolution is stretched across the whole panel, so the dead strip still eats part of the picture. ScreenShift decides *where* on the panel the picture goes.
+- `--apply`: apply saved settings without a confirmation dialog.
+- `--reset`: restore the full screen and delete crop settings.
+- `--lang=en`: select `en`, `zh`, `ru`, `ja` or `ko` at startup.
 
-**Why not AMD or NVIDIA scaling options?**
-Those usually center the picture, which wastes good pixels on the opposite side, and are often missing for built-in laptop panels. ScreenShift lets you cut each side by exactly the amount you need.
+## 签名与校验 / Signing and verification
 
-**Is it free?**
-Yes, for personal use: you, on your own computer, for your own private purposes. Everything else needs a paid commercial license: companies, freelancers, schools, charities and other organizations, work computers, and any service such as repairing other people's laptops. See [License](#license).
+版本标识为 `1.3.0-four-edge`。普通构建输出未签名 EXE 和 SHA-256 文件。以下命令创建或复用本地开发证书，将签名副本放入 `dist\self-signed`：
 
-**Which languages does it speak?**
-English and Russian. ScreenShift picks Russian when Windows is set to Russian and English otherwise. Use `--lang=en` or `--lang=ru` to override it. All texts live in one small `L.T("ru", "en")` table in the source, so adding another language is easy, see [Contributing](#contributing).
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\self-sign.ps1 -Publisher Hao
+Get-AuthenticodeSignature .\dist\self-signed\ScreenShift.exe
+Get-FileHash .\dist\self-signed\ScreenShift.exe -Algorithm SHA256
+```
 
-## Trust and verification
+自签名使用当前用户证书库、不可导出私钥和 SHA-256，不安装受信任根证书、不添加可信时间戳。需要受信任签名时取得相应证书，并使用 `build.ps1 -Sign -CertificateThumbprint ... -SignToolPath ... -TimestampUrl ...`。不要提交私钥或密码。
 
-ScreenShift changes display settings, so you should be able to check what you run.
+The identifier is `1.3.0-four-edge`. Normal builds are unsigned with a SHA-256 checksum. The script creates/reuses a local certificate with a non-exportable private key and signs a separate copy. No trusted root or trusted timestamp is added. For trusted signing, configure an appropriate certificate and Windows SDK SignTool, then provide the build script's signing options. Never commit private keys or passwords. Signing does not bypass Gmail attachment restrictions or guarantee SmartScreen reputation.
 
-- The whole program is one file: [`ScreenShift.cs`](ScreenShift.cs), about 550 lines. It makes no network calls and writes only `settings.txt`.
-- Build it yourself in seconds with the C# compiler that ships with Windows, no SDK needed:
+## 下载、贡献与许可 / Downloads, contribution and license
 
-  ```powershell
-  powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
-  ```
+原作者 Bluremind。Copyright (c) 2026 Bluremind。保留并遵循 [LICENSE](LICENSE) 与 [COMMERCIAL.md](COMMERCIAL.md)。本 fork 暂不发布修改版 EXE；修改版分发须取得许可要求的书面授权。原作者正式版本见 [上游 Releases](https://github.com/Bluremind/ScreenShift/releases)。上次 PR 已合并不代表后续版本获准分发。
 
-- The geometry and key checks run against the built exe and never touch your display settings:
-
-  ```powershell
-  powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\four-edges.ps1
-  ```
-
-- The release page lists the **SHA-256** of the published exe.
-- The exe is not code-signed, so SmartScreen may warn on first run. Choose *More info*, then *Run anyway*, or build from source.
-
-## Contributing
-
-Issues and pull requests are welcome. By submitting a contribution you agree that it is distributed under the project's [license](#license), including the commercial licenses offered by the author. Good first contributions:
-
-- More interface languages (English and Russian are built in)
-- Support for multiple displays
-- Reports of which GPUs and laptops work
-- An optional "start with Windows" switch
-
-## License
-
-| | |
-| --- | --- |
-| **Personal use** | **Free.** An individual, on their own computer, for their own private purposes, under the [ScreenShift Personal Use License](LICENSE). |
-| **Everything else** | **Paid license.** Companies, freelancers, schools, charities and other organizations, work computers, any service, redistribution. See [COMMERCIAL.md](COMMERCIAL.md). |
-
-The source code is public so you can read and verify it, but this is not an open-source license in the OSI sense.
-
-**Contact for a commercial license:** [bluremind@gmail.com](mailto:bluremind@gmail.com?subject=ScreenShift%20commercial%20license) · [GitHub issues](https://github.com/Bluremind/ScreenShift/issues) for questions and bug reports.
-<div align="center">
-
-If ScreenShift saved your laptop, a ⭐ helps other people find it.
-
-</div>
+Original author: Bluremind. Copyright (c) 2026 Bluremind. Original [LICENSE](LICENSE) and [COMMERCIAL.md](COMMERCIAL.md) apply. This fork offers no modified executable release. Obtain required written permission before distribution. Official builds are available from [upstream Releases](https://github.com/Bluremind/ScreenShift/releases). The previous merged PR does not imply permission to distribute later modified executables.
