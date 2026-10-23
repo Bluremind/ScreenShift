@@ -19,6 +19,20 @@ foreach ($rotation in 1..4) {
     Assert ($identity.IsIdentity) "Identity failed for rotation $rotation"
     Assert ($identity.Desktop -eq $expected -and $identity.PathSource -eq $expected) 'Source dimensions incorrect'
     Assert ($identity.Rotation -eq $rotation -and $identity.SignalSize -eq $c.SignalSize) 'Physical timing or rotation changed'
+    $raw = $c.GetType().GetField('modes',$flags).GetValue($identity)
+    Assert ([BitConverter]::ToInt32($raw,16) -eq 1920 -and [BitConverter]::ToInt32($raw,20) -eq 1080) 'Identity source must retain pre-rotation dimensions'
+    Assert ([BitConverter]::ToInt32($raw,144) -eq 1920 -and [BitConverter]::ToInt32($raw,148) -eq 1080) 'Identity path source must retain pre-rotation dimensions'
+    $probe = $identity.With($expected,(New-Object Drawing.Rectangle(30,40,100,200)))
+    $raw = $c.GetType().GetField('modes',$flags).GetValue($probe)
+    $expectedRaw = switch ($rotation) {
+        1 { @(30,40,130,240) }
+        2 { @(40,950,240,1050) }
+        3 { @(1790,840,1890,1040) }
+        4 { @(1680,30,1880,130) }
+    }
+    for ($i=0; $i -lt 4; $i++) {
+        Assert ([BitConverter]::ToInt32($raw,(152+4*$i)) -eq $expectedRaw[$i]) "Wrong raw rectangle for rotation $rotation"
+    }
     $area = New-Object Drawing.Rectangle(30,40,($expected.Width-100),($expected.Height-120))
     $desktop = New-Object Drawing.Size([int]($expected.Width/2),[int]($expected.Height/2))
     $region = [ScreenShift.Planner]::Fit($desktop,$area)

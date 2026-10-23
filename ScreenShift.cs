@@ -1,4 +1,4 @@
-﻿// Required Notice: Copyright (c) 2026 Bluremind (https://github.com/Bluremind/ScreenShift)
+// Required Notice: Copyright (c) 2026 Bluremind (https://github.com/Bluremind/ScreenShift)
 // Free for personal use under the ScreenShift Personal Use License (see LICENSE). Any other use needs a paid license (COMMERCIAL.md).
 //
 // ScreenShift: moves the Windows picture off the dead strips of a damaged panel.
@@ -81,16 +81,25 @@ namespace ScreenShift
 
         public uint Rotation { get { return BitConverter.ToUInt32(paths, 40); } }
         public Size SignalSize { get { return new Size(Get(tgt * ModeSize + 40), Get(tgt * ModeSize + 44)); } }
-        // Target timings stay in physical orientation; source/desktop coordinates rotate.
+        // Target timings stay in physical orientation; public geometry follows the visible desktop.
         public Size Panel
         {
             get { Size s = SignalSize; return Rotation == 2 || Rotation == 4 ? new Size(s.Height, s.Width) : s; }
         }
-        public Size Desktop { get { return new Size(Get(src * ModeSize + 16), Get(src * ModeSize + 20)); } }
-        public Size PathSource { get { return new Size(Get(img * ModeSize + 16), Get(img * ModeSize + 20)); } }
+        Size OrientedSize(Size size) { return Rotation == 2 || Rotation == 4 ? new Size(size.Height, size.Width) : size; }
+        public Size Desktop { get { return OrientedSize(new Size(Get(src * ModeSize + 16), Get(src * ModeSize + 20))); } }
+        public Size PathSource { get { return OrientedSize(new Size(Get(img * ModeSize + 16), Get(img * ModeSize + 20))); } }
         public Rectangle Region
         {
-            get { int o = img * ModeSize + 24; return Rectangle.FromLTRB(Get(o), Get(o + 4), Get(o + 8), Get(o + 12)); }
+            get {
+                int o = img * ModeSize + 24;
+                Rectangle r = Rectangle.FromLTRB(Get(o), Get(o + 4), Get(o + 8), Get(o + 12));
+                Size s = new Size(Get(img * ModeSize + 16), Get(img * ModeSize + 20));
+                if (Rotation == 2) return new Rectangle(s.Height - r.Bottom, r.Left, r.Height, r.Width);
+                if (Rotation == 3) return new Rectangle(s.Width - r.Right, s.Height - r.Bottom, r.Width, r.Height);
+                if (Rotation == 4) return new Rectangle(r.Top, s.Width - r.Right, r.Height, r.Width);
+                return r;
+            }
         }
         public bool IsIdentity
         {
@@ -105,7 +114,13 @@ namespace ScreenShift
                 paths = (byte[])paths.Clone(), modes = (byte[])modes.Clone(),
                 numPaths = numPaths, numModes = numModes, src = src, tgt = tgt, img = img,
             };
-            Size panel = Panel;
+            // CCD stores the surface and image region before the path rotation.
+            // Public geometry and the overlay use the user's visible, rotated desktop.
+            Size panel = SignalSize;
+            desktop = OrientedSize(desktop);
+            if (Rotation == 2) region = new Rectangle(region.Top, panel.Height - region.Right, region.Height, region.Width);
+            else if (Rotation == 3) region = new Rectangle(panel.Width - region.Right, panel.Height - region.Bottom, region.Width, region.Height);
+            else if (Rotation == 4) region = new Rectangle(panel.Width - region.Bottom, region.Left, region.Height, region.Width);
             c.Set(src * ModeSize + 16, desktop.Width);
             c.Set(src * ModeSize + 20, desktop.Height);
             int o = img * ModeSize + 16;

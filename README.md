@@ -14,6 +14,12 @@
 
 > 本版本界面支持中文、英语、日语、韩语和俄语，可在 Language 下拉框即时切换。下方保留的原项目介绍、截图和官方下载链接描述的是上游版本；上游 EXE 不包含本 fork 的四边修改。本 fork 目前没有发布修改版 EXE。
 
+## v1.6.2：修复竖屏启动错误 1610 / Fix portrait startup error 1610
+
+修正 v1.6.1 遗漏的底层坐标转换：界面使用旋转后的尺寸，CCD 源尺寸、路径源尺寸和裁切矩形使用旋转前坐标；读写时进行双向转换。避免将正常竖屏误判为已裁切，从而在打开窗口前提交无效的恢复配置。四方向测试增加底层字节布局断言；本机 AMD 780M 的 90° 竖屏全屏配置与 13 个系统模式在测试裁切区域均通过 SDC_VALIDATE（未应用显示设置）。实际裁切位置仍需目视确认。
+
+Fixes the incomplete v1.6.1 portrait conversion. UI geometry uses rotated coordinates, while CCD source dimensions, path-source dimensions and image regions use pre-rotation coordinates. Bidirectional conversion prevents normal portrait output from being mistaken for an existing crop and rejected during startup reset. Tests now assert raw geometry for all four rotations. On this AMD 780M system at 90°, the identity configuration and all 13 enumerated modes passed SDC_VALIDATE for a sample crop, without applying display changes. Visual placement still requires confirmation.
+
 ## v1.6.1：竖屏坐标修正 / Portrait coordinate fix
 
 修正 90° / 270° 旋转时仍使用物理信号宽高的问题：窗口、裁切和恢复现在使用旋转后的桌面尺寸，同时保留显示器信号时序和系统旋转方向。竖屏比例标签支持约 9:16 等。请先关闭校准窗口，在 Windows 设置方向后重新打开程序，再调整四边；已有裁切数值不会自动映射到旋转后的坏边位置。四方向坐标回归测试通过，实际竖屏显示仍需在对应硬件上确认。
